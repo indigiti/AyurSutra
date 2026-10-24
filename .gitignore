@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+server/.env
+.DS_Store
+*.log
+server/storage/.lock
+server/storage/private/
