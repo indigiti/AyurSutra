@@ -85,3 +85,14 @@ The `/admin` desk contains an **authorized JSON exam uploader**, draft/publish f
 4. Editorial review and reconciliation, particularly for multi-script transliteration and classical medical statements.
 
 The environment used for this build could inspect search-indexed public catalogue pages, but it **could not access the complete source question datasets or download the full on-site contents**. Therefore the data must be imported from an authorized export; it is not represented as complete.
+
+## Ayana authorized-content migration
+
+See [`docs/AYANA-MIGRATION.md`](docs/AYANA-MIGRATION.md) for the no-database migration workflow. New capabilities:
+
+- Admin `/admin` accepts verified *individual chapter* JSON files as drafts, with separate publish actions and imported/published content totals.
+- `scripts/migrate-ayana.py` ingests owner-provided multi-chapter, complete MCQ paper and notes JSON manifests. Default dry-run previews counts and rejects malformed records; `--apply` stages only drafts, backs up pre-existing collections, is repeatable by canonical IDs and protects published content from overwrites.
+- `/api/v1/chapters/{book}/{sthana}/{chapter}` returns only editor-published chapter passages, translations and available commentary; `/api/v1/sections` annotates published chapter titles and counts.
+- Full previous-year question banks and study-note bodies still require an authorized source export. No incomplete paper is presented as an actual AIAPGET paper.
+
+Run `python3 tests/ayana-migration-smoke.py` to test draft isolation, permissions, dry-run validation, repeat imports, backups, chapter publication and source provenance with synthetic data in a temporary directory.

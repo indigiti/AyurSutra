@@ -46,11 +46,26 @@ final class Api {
             $offset=max(0, (int)($_GET['offset']??0));$limit=min(250,max(1,(int)($_GET['limit']??100)));
             self::respond(200,['data'=>array_slice($verses,$offset,$limit),'total'=>$total,'limit'=>$limit,'offset'=>$offset]);
         }
+        // Chapter passages stay private until an editor explicitly publishes the imported chapter.
+        if ($method==='GET' && preg_match('~^/chapters/([a-z0-9-]+)/([a-z0-9-]+)/([a-z0-9-]+)$~D',$path,$m)) {
+            $chapterId=$m[1].'/'.$m[2].'/'.$m[3];
+            foreach($this->store->read('chapters') as $chapter) if(($chapter['id']??'')===$chapterId && ($chapter['status']??'')==='published') {
+                self::respond(200,['data'=>$chapter]);
+            }
+            self::respond(404,['error'=>'Published chapter not found']);
+        }
         // Public read APIs. Content status is explicit: catalogue entries are not published papers.
         if ($method==='GET' && $path==='/sections') {
             $book=trim((string)($_GET['book_id']??''));
             $items=$this->store->read('sections');
             if ($book!=='') $items=array_values(array_filter($items,fn($v)=>($v['book_id']??'')===$book));
+            $published=[];
+            foreach($this->store->read('chapters') as $chapter)if(($chapter['status']??'')==='published') $published[$chapter['id']]=$chapter;
+            foreach($items as &$section)foreach($section['chapters'] as &$chapter){
+                $key=$section['book_id'].'/'.$section['slug'].'/'.$chapter['slug'];
+                if(isset($published[$key])){$chapter['status']='published';$chapter['title']=$published[$key]['title'];$chapter['passage_count']=count($published[$key]['passages']??[]);}
+            }
+            unset($section,$chapter);
             self::respond(200,['data'=>$items]);
         }
         if ($method==='GET' && $path==='/exams') {
@@ -91,6 +106,75 @@ final class Api {
         if (str_starts_with($path,'/admin/')) {
             $this->authorize();
             if ($method==='GET' && $path==='/admin/status') self::respond(200,['ok'=>true,'storage'=>'JSON file collections','role'=>'editor']);
+            if ($method==='GET' && $path==='/admin/import-status') {
+                $chapters=$this->store->read('chapters');$exams=$this->store->read('exams');$notes=$this->store->read('notes');
+                $count=static fn($items,$status)=>count(array_filter($items,static fn($v)=>($v['status']??'')===$status));
+                self::respond(200,['data'=>[
+                    'chapters'=>['draft'=>$count($chapters,'draft'),'published'=>$count($chapters,'published'),'total'=>count($chapters)],
+                    'exams'=>['draft'=>$count($exams,'draft'),'published'=>$count($exams,'published'),'indexed'=>count($exams)],
+                    'notes'=>['draft'=>$count($notes,'draft'),'published'=>$count($notes,'published'),'total'=>count($notes)],
+                ]]);
+            }
+            // Browser-friendly single-chapter JSON import. Large collections use the offline migration manifest.
+            if ($method==='POST' && $path==='/admin/chapters/import') {
+                $b=self::body();
+                $book=$b['book_id']??null;$sectionSlug=$b['section_slug']??null;$chapterSlug=$b['chapter_slug']??null;
+                foreach([$book,$sectionSlug,$chapterSlug] as $key)if(!is_string($key)||!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D',$key))self::respond(422,['error'=>'Invalid book, section, or chapter slug']);
+                $section=null;$chapterIndex=null;
+                foreach($this->store->read('sections') as $candidate){
+                    if(($candidate['book_id']??'')===$book && ($candidate['slug']??'')===$sectionSlug){
+                        $section=$candidate;
+                        foreach($candidate['chapters']??[] as $c)if(($c['slug']??'')===$chapterSlug)$chapterIndex=$c;
+                    }
+                }
+                if(!$section||!$chapterIndex)self::respond(422,['error'=>'Chapter is not in the indexed classical library']);
+                $source=$b['source_url']??'';
+                if(!is_string($source)||strlen($source)>2000||!filter_var($source,FILTER_VALIDATE_URL)||parse_url($source,PHP_URL_SCHEME)!=='https')self::respond(422,['error'=>'HTTPS source URL required']);
+                $passages=$b['passages']??null;
+                if(!is_array($passages)||!array_is_list($passages)||count($passages)<1||count($passages)>300)self::respond(422,['error'=>'Upload 1–300 passages per chapter (offline importer supports more)']);
+                $normalized=[];
+                foreach($passages as $index=>$p){
+                    if(!is_array($p))self::respond(422,['error'=>'Invalid passage']);
+                    $ref=$p['reference']??'';$dev=$p['text_devanagari']??'';$iast=$p['text_iast']??'';
+                    if(!is_string($ref)||trim($ref)===''||strlen($ref)>100||!is_string($dev)||!is_string($iast)||trim($dev.$iast)===''||strlen($dev)>40000||strlen($iast)>40000)self::respond(422,['error'=>'Missing or invalid source text at passage '.($index+1)]);
+                    $translation=$p['translation_en']??'';$commentary=$p['commentary']??'';$terms=$p['key_terms']??[];
+                    if(!is_string($translation)||strlen($translation)>15000||!is_string($commentary)||strlen($commentary)>120000||!is_array($terms)||!array_is_list($terms)||count($terms)>50)self::respond(422,['error'=>'Invalid commentary or terminology']);
+                    $cleanTerms=[];
+                    foreach($terms as $term){if(!is_array($term)||!is_string($term['term']??null)||!is_string($term['definition']??null)||strlen($term['term'])>200||strlen($term['definition'])>2000)self::respond(422,['error'=>'Invalid key term']);$cleanTerms[]=['term'=>$term['term'],'definition'=>$term['definition']];}
+                    $normalized[]=['id'=>substr(hash('sha256',$book.'/'.$sectionSlug.'/'.$chapterSlug.'/'.$index.'/'.$ref),0,20),'reference'=>trim($ref),'text_devanagari'=>trim($dev),'text_iast'=>trim($iast),'translation_en'=>trim($translation),'commentary'=>trim($commentary),'key_terms'=>$cleanTerms];
+                }
+                $id=$book.'/'.$sectionSlug.'/'.$chapterSlug;
+                $title=$b['title']??($chapterIndex['title']??null);
+                if(!is_string($title)||!trim($title)||strlen($title)>240)$title='Chapter '.($chapterIndex['number']??'');
+                $record=['id'=>$id,'book_id'=>$book,'section_slug'=>$sectionSlug,'chapter_slug'=>$chapterSlug,'chapter_number'=>$chapterIndex['number'],'title'=>$title,'source_url'=>$source,'passages'=>$normalized,'source_hash'=>hash('sha256',json_encode($normalized,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)),'status'=>'draft'];
+                $preserved=false;
+                $this->store->mutate('chapters',static function($items)use($record,&$preserved){
+                    foreach($items as $i=>$entry)if(($entry['id']??'')===$record['id']){
+                        if(($entry['status']??'')==='published'){$preserved=true;return $items;}
+                        $items[$i]=$record;return $items;
+                    }
+                    $items[]=$record;return $items;
+                });
+                if($preserved)self::respond(409,['error'=>'Published chapter is protected from overwrite']);
+                self::respond(201,['ok'=>true,'id'=>$id,'passage_count'=>count($normalized),'status'=>'draft']);
+            }
+            if ($method==='GET' && $path==='/admin/chapters') {
+                $items=array_map(static function($c){unset($c['passages']);return $c;},$this->store->read('chapters'));
+                self::respond(200,['data'=>$items]);
+            }
+            if ($method==='POST' && $path==='/admin/chapters/publish') {
+                $payload=self::body();$id=$payload['id']??null;
+                if(!is_string($id)||!preg_match('~^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$~D',$id))self::respond(422,['error'=>'Invalid chapter ID']);
+                $found=false;
+                $this->store->mutate('chapters',static function($items)use($id,&$found){
+                    foreach($items as &$item) if(($item['id']??'')===$id && !empty($item['passages'])) {
+                        $found=true;$item['status']='published';$item['published_at']=gmdate('c');break;
+                    }
+                    unset($item);return $items;
+                });
+                if(!$found)self::respond(404,['error'=>'Imported chapter with passages not found']);
+                self::respond(200,['ok'=>true,'id'=>$id]);
+            }
             if ($method==='GET' && $path==='/admin/exams') self::respond(200,['data'=>array_map(static function($e){$e['imported_count']=count($e['questions']??[]);unset($e['questions']);return $e;},$this->store->read('exams'))]);
             if ($method==='POST' && preg_match('~^/admin/exams/([a-z0-9-]+)/import$~D',$path,$m)) {
                 $body=self::body();$questions=$body['questions']??null;
