@@ -96,3 +96,14 @@ See [`docs/AYANA-MIGRATION.md`](docs/AYANA-MIGRATION.md) for the no-database mig
 - Full previous-year question banks and study-note bodies still require an authorized source export. No incomplete paper is presented as an actual AIAPGET paper.
 
 Run `python3 tests/ayana-migration-smoke.py` to test draft isolation, permissions, dry-run validation, repeat imports, backups, chapter publication and source provenance with synthetic data in a temporary directory.
+
+
+## v4 — Global content search and migration integrity
+
+- `/search?q=...` is a dedicated React results view with filters for original texts, published notes and published exams. The search dialog also links to this page.
+- `GET /api/v1/search?q=...&type=all|texts|notes|exams&limit=20` is a Unicode-aware PHP endpoint backed by `SearchService.php`. It searches the three verified starter passages, **published** full chapter passages and their key terms, published study notes, and published exam titles. It does **not** reveal draft content, private commentary or exam answer keys. `type` and query size are validated, and results are bounded to 40 per request. Results explicitly label samples and catalogue records.
+- The offline Ayana JSON importer now holds the exact per-collection `.json.lock` files used by PHP `FileStore` while **re-reading and merging** content. This prevents a concurrent editor publication from being overwritten by a stale migration preview. Each apply retains timestamped recovery snapshots; the import remains draft-only and preserves published content.
+- The admin exam importer now rejects attempts to replace an already published paper with HTTP 409, matching chapter protection.
+- Test search with `python3 tests/search-api-smoke.py`; regression suites are `python3 tests/academy-api-smoke.py`, `python3 tests/ayana-migration-smoke.py` and `php tests/api-smoke.php`.
+
+**Content status:** Only the starter passages are bundled, and no complete Ayana-owned exam paper, note or chapter dataset was available to ingest here. Real content must be exported by the owner (e.g. `docs/ayana-export-example.json` schema) and passed through a dry-run, staged import, and review before publication. This version does not claim completed Ayana content parity or a verified npm/Vite build.

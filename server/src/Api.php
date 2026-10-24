@@ -40,6 +40,12 @@ final class Api {
         if ($method==='OPTIONS') self::respond(405,['error'=>'CORS preflight not supported; use same origin']);
         if ($method==='GET' && $path==='/status') self::respond(200,['ok'=>true,'version'=>'0.1.0','storage'=>'json-files','database'=>false]);
         if ($method==='GET' && $path==='/books') self::respond(200,['data'=>$this->store->read('books')]);
+        if ($method==='GET' && $path==='/search') {
+            $query=trim((string)($_GET['q']??''));$type=(string)($_GET['type']??'all');
+            if (strlen($query)>400 || !preg_match('/^.{2,120}$/us',$query) || !in_array($type,['all','texts','notes','exams'],true))self::respond(422,['error'=>'Enter 2–120 characters and a valid search category']);
+            $limit=min(40,max(1,(int)($_GET['limit']??20)));
+            self::respond(200,(new SearchService($this->store))->search($query,$type,$limit));
+        }
         if ($method==='GET' && preg_match('~^/books/([a-z0-9-]+)/verses$~D',$path,$m)) {
             $verses=array_values(array_filter($this->store->read('verses'),fn($v)=>($v['book_id']??'')===$m[1] && ($v['reviewed']??false)===true && (!array_key_exists('published',$v) || $v['published']===true)));
             $total=count($verses);
@@ -179,10 +185,11 @@ final class Api {
             if ($method==='POST' && preg_match('~^/admin/exams/([a-z0-9-]+)/import$~D',$path,$m)) {
                 $body=self::body();$questions=$body['questions']??null;
                 if(!is_array($questions)||!array_is_list($questions)||count($questions)>250) self::respond(422,['error'=>'Provide an array of no more than 250 questions']);
-                $found=false;$invalid=null;
-                $this->store->mutate('exams',function($items)use($m,$questions,&$found,&$invalid){
+                $found=false;$invalid=null;$protected=false;
+                $this->store->mutate('exams',function($items)use($m,$questions,&$found,&$invalid,&$protected){
                     foreach($items as &$e)if($e['id']===$m[1]){
                         $found=true;
+                        if(($e['status']??'')==='published'){$protected=true;break;}
                         if(count($questions)!==(int)$e['expected_count']){$invalid='Question total must match expected paper size';break;}
                         $ids=[];$validated=[];
                         foreach($questions as $i=>$q){
@@ -197,6 +204,7 @@ final class Api {
                     unset($e);return $items;
                 });
                 if(!$found) self::respond(404,['error'=>'Exam set not found']);
+                if($protected) self::respond(409,['error'=>'Published exam is protected from overwrite']);
                 if($invalid!==null) self::respond(422,['error'=>$invalid]);
                 self::respond(200,['ok'=>true,'status'=>'draft','imported_count'=>count($questions)]);
             }

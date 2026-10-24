@@ -73,7 +73,7 @@ Prepare one JSON manifest (format `ayursutra-ay-1`) containing `chapters`, `pape
 4. Review errors, counts, source licensing and potential duplicates. Run `python3 scripts/migrate-ayana.py path/to/ayana-export.json --apply` only after validation.
 5. On the private React admin screen publish verified chapters, complete exams and notes individually. Unpublished content is not exposed through public APIs.
 
-The importer is idempotent on chapter and note IDs and exam paper IDs. Re-runs update drafts but **never overwrite published records**. Before writes, it creates timestamped backups under `server/storage/backups/`. Keep backups and draft content outside `public_html` in Cloudways.
+The importer shares the per-collection locks used by the PHP API and re-merges after acquiring them, preventing stale previews from overwriting concurrently published content. The importer is idempotent on chapter and note IDs and exam paper IDs. Re-runs update drafts but **never overwrite published records**. Before writes, it creates timestamped backups under `server/storage/backups/`. Keep backups and draft content outside `public_html` in Cloudways.
 
 ### Cloudways security and rollout
 

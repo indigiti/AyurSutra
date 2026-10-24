@@ -27,6 +27,8 @@ with tempfile.TemporaryDirectory() as temp:
     status,still=call('exams/aiapget-2017');assert status==200 and not still['data']['questions']
     status,pub=call('admin/exams/aiapget-2017/publish','POST',{},True);assert status==200
     status,public=call('exams/aiapget-2017');assert status==200 and len(public['data']['questions'])==100 and 'answer' not in public['data']['questions'][0]
+    status,blocked=call('admin/exams/aiapget-2017/import','POST',{'questions':questions},True);assert status==409 and 'protected' in blocked['error']
+    status,still_public=call('exams/aiapget-2017');assert status==200 and len(still_public['data']['questions'])==100
     status,grade=call('exams/aiapget-2017/score','POST',{'answers':{'aiapget-2017-1':0}});assert status==200 and grade['data']['score']==1 and len(grade['data']['review'])==100
     status,note=call('admin/notes','POST',{'title':'Test editorial note','body':'Authorized note body','subject':'Shalya Tantra','level':'BAMS'},True);assert status==201
     status,private=call('notes');assert private['data']==[]

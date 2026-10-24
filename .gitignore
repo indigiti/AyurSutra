@@ -6,3 +6,12 @@ server/.env
 *.log
 server/storage/.lock
 server/storage/private/
+
+# Never commit imported Ayana source exports, draft collections or private recovery files.
+server/storage/backups/
+server/storage/staging/
+server/storage/*.json.lock
+server/storage/.migration.lock
+server/storage/*.tmp
+migration-preview*.json
+exports/

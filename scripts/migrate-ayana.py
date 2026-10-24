@@ -15,6 +15,7 @@ import tempfile
 import time
 from urllib.parse import urlparse
 import fcntl
+from contextlib import ExitStack
 
 ROOT=Path(__file__).resolve().parents[1]
 COLLECTIONS=('sections','chapters','exams','notes')
@@ -160,38 +161,55 @@ def merge(data, storage):
                 counts[key]['new']+=1;id_to_pos[incoming['id']]=len(items);items.append(fresh)
     return existing,counts
 
-def save_all(storage,collections):
+def save_all(storage, incoming):
+    """Stage exports while holding the same per-collection locks as the PHP API.
+
+    The merge is repeated *after* lock acquisition: a published record can never be
+    overwritten by a stale pre-lock preview. Roll back all collections on failure.
+    """
     storage.mkdir(parents=True,exist_ok=True)
-    lock=storage/'.migration.lock'
-    with lock.open('a+') as file_lock:
-        fcntl.flock(file_lock,fcntl.LOCK_EX)
-        backups={}
+    with ExitStack() as stack:
+        migration_lock=stack.enter_context((storage/'.migration.lock').open('a+'))
+        fcntl.flock(migration_lock,fcntl.LOCK_EX)
+        # Identical lock filenames used by FileStore::mutate; stable order avoids deadlock.
+        for name in ('chapters','exams','notes'):
+            lock=stack.enter_context((storage/(name+'.json.lock')).open('a+'))
+            fcntl.flock(lock,fcntl.LOCK_EX)
+        merged,counts=merge(incoming,storage)
+        timestamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+        backup_dir=storage/'backups'/('ayana-'+timestamp+'-'+str(os.getpid()))
+        backup_dir.mkdir(parents=True,exist_ok=False)
+        previous={}
         try:
-            # Store recoverable copies before updating any collection.
-            timestamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
-            backup_dir=storage/'backups'/('ayana-'+timestamp+'-'+str(os.getpid()))
-            backup_dir.mkdir(parents=True,exist_ok=False)
             for kind in ('chapters','exams','notes'):
                 old=storage/(kind+'.json')
-                backups[kind]=old.read_bytes() if old.exists() else None
-                if old.exists():(backup_dir/(kind+'.json')).write_bytes(backups[kind])
+                previous[kind]=old.read_bytes() if old.exists() else None
+                if old.exists():
+                    destination=backup_dir/(kind+'.json')
+                    destination.write_bytes(previous[kind]);os.chmod(destination,0o640)
             for kind in ('chapters','exams','notes'):
                 fd,temp=tempfile.mkstemp(prefix='.ayana-',suffix='.tmp',dir=storage)
                 try:
                     with os.fdopen(fd,'w',encoding='utf-8') as stream:
-                        json.dump(collections[kind],stream,ensure_ascii=False,indent=2)
+                        json.dump(merged[kind],stream,ensure_ascii=False,indent=2)
                         stream.write('\n');stream.flush();os.fsync(stream.fileno())
                     os.chmod(temp,0o640);os.replace(temp,storage/(kind+'.json'))
                 finally:
                     if os.path.exists(temp):os.unlink(temp)
-            return str(backup_dir)
+            return str(backup_dir),counts
         except BaseException:
-            for kind,contents in backups.items():
+            for kind,contents in previous.items():
                 path=storage/(kind+'.json')
                 if contents is None:path.unlink(missing_ok=True)
-                else:path.write_bytes(contents)
+                else:
+                    fd,temp=tempfile.mkstemp(prefix='.ayana-rollback-',dir=storage)
+                    try:
+                        with os.fdopen(fd,'wb') as stream:
+                            stream.write(contents);stream.flush();os.fsync(stream.fileno())
+                        os.chmod(temp,0o640);os.replace(temp,path)
+                    finally:
+                        if os.path.exists(temp):os.unlink(temp)
             raise
-        finally:fcntl.flock(file_lock,fcntl.LOCK_UN)
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
@@ -206,9 +224,13 @@ def main():
         if errors:
             report={'ok':False,'mode':'validation','errors':errors,'imported':False}
         else:
-            merged,counts=merge(data,a.storage)
+            if a.apply:
+                backup,counts=save_all(a.storage,data)
+            else:
+                _,counts=merge(data,a.storage)
+                backup=None
             report={'ok':True,'mode':'apply' if a.apply else 'dry-run','counts':counts,'imported':a.apply,
-                    'records':{key:len(data[key]) for key in data},'backup_path':save_all(a.storage,merged) if a.apply else None}
+                    'records':{key:len(data[key]) for key in data},'backup_path':backup}
     except (ValueError,OSError,json.JSONDecodeError) as err:
         report={'ok':False,'mode':'validation','errors':[str(err)],'imported':False}
     rendered=json.dumps(report,indent=2,ensure_ascii=False)

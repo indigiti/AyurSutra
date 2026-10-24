@@ -1,5 +1,35 @@
 [
-  {"id":"caraka-1-1","book_id":"charaka-samhita","chapter":"Dīrghañjīvitīya","section":"Sūtrasthāna","reference":"1.1","text_iast":"athāto dīrghañjīvitīyamadhyāyaṃ vyākhyāsyāmaḥ ||","source_id":"sarit-caraka","reviewed":true},
-  {"id":"caraka-1-2","book_id":"charaka-samhita","chapter":"Dīrghañjīvitīya","section":"Sūtrasthāna","reference":"1.2","text_iast":"iti ha smāha bhagavānātreyaḥ ||","source_id":"sarit-caraka","reviewed":true},
-  {"id":"sushruta-1-1","book_id":"sushruta-samhita","chapter":"Vedotpatti","section":"Sūtrasthāna","reference":"1.1","text_iast":"athāto vedotpattimadhyāyaṃ vyākhyāsyāmaḥ ||","source_id":"sarit-sushruta","reviewed":true}
+  {
+    "id": "caraka-1-1",
+    "book_id": "charaka-samhita",
+    "chapter": "Dīrghañjīvitīya",
+    "section": "Sūtrasthāna",
+    "reference": "1.1",
+    "text_iast": "athāto dīrghañjīvitīyamadhyāyaṃ vyākhyāsyāmaḥ ||",
+    "source_id": "sarit-caraka",
+    "reviewed": true,
+    "text_devanagari": "अथातो दीर्घञ्जीवितीयमध्यायं व्याख्यास्यामः ॥"
+  },
+  {
+    "id": "caraka-1-2",
+    "book_id": "charaka-samhita",
+    "chapter": "Dīrghañjīvitīya",
+    "section": "Sūtrasthāna",
+    "reference": "1.2",
+    "text_iast": "iti ha smāha bhagavānātreyaḥ ||",
+    "source_id": "sarit-caraka",
+    "reviewed": true,
+    "text_devanagari": "इति ह स्माह भगवानात्रेयः ॥"
+  },
+  {
+    "id": "sushruta-1-1",
+    "book_id": "sushruta-samhita",
+    "chapter": "Vedotpatti",
+    "section": "Sūtrasthāna",
+    "reference": "1.1",
+    "text_iast": "athāto vedotpattimadhyāyaṃ vyākhyāsyāmaḥ ||",
+    "source_id": "sarit-sushruta",
+    "reviewed": true,
+    "text_devanagari": "अथातो वेदोत्पत्तिमध्यायं व्याख्यास्यामः ॥"
+  }
 ]
