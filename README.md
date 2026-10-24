@@ -53,3 +53,35 @@ The interface draws on patterns from Ayana Academy, AIIA Ayurvidya, Readwise Rea
 - **Python/CV:** `services/vision` has a restricted FastAPI image-quality inspection endpoint (not OCR). Run and deploy it separately once its dependencies and private internal token are configured.
 - **Capacitor:** `capacitor.config.ts` is included for later Android/iOS packaging (`npx cap add android` / `npx cap add ios` after installing native SDKs). No native builds are included.
 - **Redis/R2:** architecture extension points only; neither Redis nor Cloudflare R2 is required for this file-backed launch and neither is configured or claimed operational.
+
+
+## Academy expansion (Ayana-reference feature parity, 24 October 2026)
+
+React screens now include `/mcq`, `/mcq/:id`, `/notes`, `/notes/:slug`, `/viva`, and `/library/:book/:section/:chapter`. The existing book page also includes a 27-Sthāna navigator with **652 chapter index entries**, derived from the public Ayana Academy chapter counts. Chapter entries are **index shells, not downloaded verse content**.
+
+The exam catalogue includes AIAPGET 2017–2025 and 7 other PG sets (**16 paper slots**), all labelled **awaiting import**, not fictitiously advertised as question banks. The dedicated `/mcq/demo` is functional with the existing three sample MCQs: answer selection, navigation, marking for review, a running timer, scoring, and an explanation review. Published papers are fetched without answer keys and scored on the PHP API after submission. Browser progress is local, not synchronized.
+
+The `/admin` desk contains an **authorized JSON exam uploader**, draft/publish flow, and a basic BAMS/MD/MS note editor. Paper imports must contain the exact number of questions for the selected exam and pass structure validation; questions remain drafts until an editor publishes the paper. Notes likewise require explicit publication. No source content has been silently scraped or imported by this build.
+
+### Exam import JSON shape
+
+```json
+{
+  "questions": [
+    {"id":"aiapget-2017-1","question":"Your licensed question text","options":["Option A","Option B","Option C","Option D"],"answer":0,"explanation":"Editorially verified rationale","subject":"Ayurveda"}
+  ]
+}
+```
+
+`answer` is zero-based (`0` = A). Every imported set must contain exactly its catalogue `expected_count` (for example 100 questions for AIAPGET 2017). Send the complete JSON file through the authenticated admin upload. Individual notes are created as drafts in the admin note form. In production, keep `AYURSUTRA_ADMIN_TOKEN` private and enable edge rate limiting.
+
+**Migration boundaries:** `server/src/StoreInterface.php` is the persistence contract; PHP API routes use the interface rather than JSON filenames. A future MariaDB implementation should retain API data shapes and swap the StoreInterface adapter. Server-side storage is not copied into public HTML. The public `content/` assets contain *index metadata only*, never answer keys or unpublished note bodies.
+
+### Content required for full parity
+
+1. Owner-approved source export (JSON / database export / source files) for all AIAPGET papers and other PG question sets, with correct answer keys and commentary.
+2. The complete scholarly Sanskrit editions and source-linked verse/commentary data, with matching chapter slugs and provenance.
+3. Ayana's three Shalya Tantra notes and subsequent content, plus the viva question bank.
+4. Editorial review and reconciliation, particularly for multi-script transliteration and classical medical statements.
+
+The environment used for this build could inspect search-indexed public catalogue pages, but it **could not access the complete source question datasets or download the full on-site contents**. Therefore the data must be imported from an authorized export; it is not represented as complete.
