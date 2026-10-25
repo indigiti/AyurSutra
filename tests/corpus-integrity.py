@@ -17,6 +17,7 @@ for section in sections:
     assert len({c['slug'] for c in section['chapters']})==len(section['chapters']),key
     counts[section['book_id']]=counts.get(section['book_id'],0)+len(section['chapters'])
 assert counts==expected,(counts,expected)
+assert [x['entry_kind'] for x in next(s for s in sections if s['book_id']=='madhava-nidana')['chapters'][-2:]]==['index','bibliography']
 lookup={(s['book_id'],s['slug']):s for s in sections}
 imported={}
 for book in manifest['books']:

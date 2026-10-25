@@ -10,7 +10,7 @@ The public read-only source corpus is independent of the editorial chapters coll
 | ashtanga-sangraha | 150 | 22670 | https://github.com/sarit/SARIT-corpus/blob/master/astangasangraha.xml | Source transcription; not independently proofread |
 | madhava-nidana | 1 | 21 | https://sa.wikisource.org/wiki/माधवनिदानम् | Source transcription; not independently proofread |
 
-The fifth text presently provides only 21 Devanagari passages from its first chapter, *Pañcanidānalakṣaṇam*. It was cross-referenced with the Sanskrit Wikisource edition and a Sanskrit-text mirror; the two transcriptions may differ. The remaining 69 indexed Madhava entries are not claimed as imported or verified. Source-specific reuse terms must be retained and reviewed.
+The fifth text presently provides only 21 Devanagari passages from its first chapter, *Pañcanidānalakṣaṇam*. It was cross-referenced with the Sanskrit Wikisource edition and a Sanskrit-text mirror; the two transcriptions may differ. The remaining 69 indexed Madhava entries comprise 67 diagnostic text chapters and two supplementary entries (subject index and source references). They are not claimed as imported or verified. Source-specific reuse terms must be retained and reviewed.
 
 The four SARIT editions provide IAST Sanskrit only; none includes a complete editor-approved Ayana translation or commentary in the new application. SARIT CC BY-SA 3.0 source attribution remains mandatory, while the Sanskrit Wikisource source uses CC BY-SA 4.0. 
 
