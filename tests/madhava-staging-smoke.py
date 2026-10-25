@@ -14,7 +14,8 @@ with tempfile.TemporaryDirectory() as temp:
     assert len(payload['chapters'])==67
     assert payload['chapters'][0]['chapter_slug']=='chapter-02'
     assert payload['chapters'][-1]['chapter_slug']=='chapter-68'
-    assert payload['chapters'][0]['passages'][0]['reference']=='source-line-0001'\n    assert payload['chapters'][0]['passages'][0]['text_devanagari']=='प्रथमपङ्क्तिः'
+    assert payload['chapters'][0]['passages'][0]['reference']=='source-line-0001'
+    assert payload['chapters'][0]['passages'][0]['text_devanagari']=='प्रथमपङ्क्तिः'
     try:module.stage(text,10001,output);raise AssertionError('Overwrote unreviewed content')
     except FileExistsError:pass
     try:module.stage(text.replace('== स्रोतः ==','== another =='),10001,Path(temp)/'reject.json');raise AssertionError('Accepted wrong source structure')
