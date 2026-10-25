@@ -24,7 +24,7 @@ jobs:
           python3 scripts/stage-madhava-wikisource.py --fetch --output "$RUNNER_TEMP/madhava/owner-review-drafts.json" | tee "$RUNNER_TEMP/madhava/report.json"
       - name: Preserve draft preview as a short-lived restricted review artifact
         if: steps.fetch.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: madhava-unreviewed-chapters
           path: ${{ runner.temp }}/madhava/
