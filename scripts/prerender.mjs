@@ -1,17 +1,18 @@
 // Builds actual, crawlable page HTML using the same React tree as the client.
 import {build} from 'esbuild';
-import {pathToFileURL} from 'node:url';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
 import fs from 'node:fs/promises';
 import path from 'node:path';
 const root=process.cwd();
-const entry=path.join(root,'dist','ayursutra-server-entry.mjs');
+const entry=path.join(root,'dist','ayursutra-server-entry.cjs');
 await build({
   entryPoints:[path.join(root,'src/entry-server.tsx')],
-  outfile:entry,platform:'node',format:'esm',target:'node22',
+  outfile:entry,platform:'node',format:'cjs',target:'node22',
   bundle:true,external:['react','react-dom','react-dom/server'],
 });
 try {
- const {render}=await import(pathToFileURL(entry).href);
+ const {render}=require(entry);
  const dist=path.join(root,'dist');
  const template=await fs.readFile(path.join(dist,'index.html'),'utf8');
  const books=[['charaka-samhita','Charaka Samhita'],['sushruta-samhita','Sushruta Samhita'],['ashtanga-hridaya','Ashtanga Hridaya'],['ashtanga-sangraha','Ashtanga Sangraha'],['madhava-nidana','Madhava Nidana']];
