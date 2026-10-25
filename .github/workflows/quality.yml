@@ -28,6 +28,7 @@ jobs:
           python tests/corpus-integrity.py
           python tests/admin-auth-limit-smoke.py
           python tests/search-index-smoke.py
+          python scripts/build-search-index.py --corpus server/storage/corpus --output "$RUNNER_TEMP/ayursutra-search-index"
   react-build:
     runs-on: ubuntu-latest
     steps:
