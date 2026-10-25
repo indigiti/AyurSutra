@@ -1,7 +1,7 @@
 name: AyurSutra checks
 on:
   push:
-    branches: [main]
+    branches: [main, hardening/m1-m5-release-foundation]
   pull_request:
     branches: [main]
 jobs:
@@ -25,6 +25,7 @@ jobs:
           python tests/ayana-migration-smoke.py
           python tests/search-api-smoke.py
           python tests/corpus-api-smoke.py
+          python tests/corpus-integrity.py
   react-build:
     runs-on: ubuntu-latest
     steps:
@@ -34,5 +35,25 @@ jobs:
           node-version: '22'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Emit generated lockfile for initial reproducibility bootstrap
+        run: |
+          echo LOCKFILE_BEGIN
+          base64 -w0 package-lock.json | fold -w 1000
+          echo
+          echo LOCKFILE_END
       - name: Build prerendered React application
         run: npm run build
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, dom, json
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
