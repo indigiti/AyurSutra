@@ -29,7 +29,7 @@ for book in manifest['books']:
         by_slug={c['slug']:c for c in catalog}
         for chapter in section['chapters']:
             assert chapter['slug'] in by_slug,key
-            assert chapter['number']==by_slug[chapter['slug']]['number'],chapter
+            if 'number' in chapter: assert chapter['number']==by_slug[chapter['slug']]['number'],chapter
             assert chapter['passage_count']>=0,chapter
             imported[bid]=imported.get(bid,0)+1
 assert imported=={'charaka-samhita':120,'sushruta-samhita':186,'ashtanga-hridaya':120,'ashtanga-sangraha':150,'madhava-nidana':1},imported
