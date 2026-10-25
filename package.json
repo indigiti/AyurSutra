@@ -33,7 +33,7 @@
     "@capacitor/cli": "^7.0.0",
     "@capacitor/android": "^7.0.0",
     "@capacitor/ios": "^7.0.0",
-    "esbuild": "^0.24.0",
+    "esbuild": "^0.28.2",
     "@playwright/test": "^1.56.0"
   }
 }
