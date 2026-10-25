@@ -23,3 +23,15 @@
 The source-mapped corpus has 120 Caraka, 186 Suśruta, 120 Aṣṭāṅgahṛdaya, 150 Aṣṭāṅgasaṅgraha chapters, and one sourced Mādhava Nidāna chapter. Sixty-nine further Mādhava catalogue entries plus full Ayana exam banks, notes, and translations require original authorized exports and scholarly review.
 
 This workflow does not deploy code, run destructive actions, configure branch rules, or verify production traffic.
+
+## Backup and isolated recovery verification
+
+Keep the archive path in private storage outside `public_html` and outside the live JSON collections. On approved staging, create an exclusive snapshot with:
+
+```bash
+python3 scripts/storage-snapshot.py --snapshot --storage /private/ayursutra/storage --archive /private/backups/ayursutra-YYYYMMDD.tar.gz
+python3 scripts/storage-snapshot.py --verify --archive /private/backups/ayursutra-YYYYMMDD.tar.gz
+python3 scripts/storage-snapshot.py --simulate-restore --archive /private/backups/ayursutra-YYYYMMDD.tar.gz
+```
+
+The restore drill operates in a temporary isolated directory and never replaces live files. Store backups encrypted off-host with restricted access: this snapshot may contain unpublished notes, exam answer keys, and editorial audit events. SHA-256 checks detect accidental corruption but do not authenticate the backup against a malicious attacker. After restoring a real isolated staging application, run browser/API acceptance and record the recovery duration. The automated CI test uses synthetic/disposable data only.
