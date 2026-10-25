@@ -107,3 +107,8 @@ Run `python3 tests/ayana-migration-smoke.py` to test draft isolation, permission
 - Test search with `python3 tests/search-api-smoke.py`; regression suites are `python3 tests/academy-api-smoke.py`, `python3 tests/ayana-migration-smoke.py` and `php tests/api-smoke.php`.
 
 **Content status:** Only the starter passages are bundled, and no complete Ayana-owned exam paper, note or chapter dataset was available to ingest here. Real content must be exported by the owner (e.g. `docs/ayana-export-example.json` schema) and passed through a dry-run, staged import, and review before publication. This version does not claim completed Ayana content parity or a verified npm/Vite build.
+
+
+## v5 — Four SARIT Sanskrit source editions integrated (25 October 2026)
+
+The read-only digital source corpus includes 576 mapped chapters and 50,669 XML text units in four works. The PHP API falls back to these attributed IAST editions when an editor-published chapter is unavailable. See docs/SARIT-IMPORT.md and server/storage/corpus/LICENSE-SOURCE.md. Madhava Nidana, Ayana-specific translations, complete AIAPGET papers and study notes remain unimported. No database required.

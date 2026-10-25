@@ -5,7 +5,11 @@ use AyurSutra\Support\StoreInterface;
 use Throwable;
 
 final class Api {
-    public function __construct(private readonly StoreInterface $store, private readonly string $adminToken) {}
+    private readonly CorpusStore $corpus;
+    public function __construct(private readonly StoreInterface $store, private readonly string $adminToken) {
+        $storage=getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage';
+        $this->corpus=new CorpusStore(getenv('AYURSUTRA_CORPUS_PATH') ?: rtrim($storage,'/').'/corpus');
+    }
     private static function respond(int $status, array $body): never {
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
@@ -40,11 +44,12 @@ final class Api {
         if ($method==='OPTIONS') self::respond(405,['error'=>'CORS preflight not supported; use same origin']);
         if ($method==='GET' && $path==='/status') self::respond(200,['ok'=>true,'version'=>'0.1.0','storage'=>'json-files','database'=>false]);
         if ($method==='GET' && $path==='/books') self::respond(200,['data'=>$this->store->read('books')]);
+        if ($method==='GET' && $path==='/corpus/status') self::respond(200,['data'=>$this->corpus->manifest()]);
         if ($method==='GET' && $path==='/search') {
             $query=trim((string)($_GET['q']??''));$type=(string)($_GET['type']??'all');
             if (strlen($query)>400 || !preg_match('/^.{2,120}$/us',$query) || !in_array($type,['all','texts','notes','exams'],true))self::respond(422,['error'=>'Enter 2–120 characters and a valid search category']);
             $limit=min(40,max(1,(int)($_GET['limit']??20)));
-            self::respond(200,(new SearchService($this->store))->search($query,$type,$limit));
+            self::respond(200,(new SearchService($this->store,$this->corpus))->search($query,$type,$limit));
         }
         if ($method==='GET' && preg_match('~^/books/([a-z0-9-]+)/verses$~D',$path,$m)) {
             $verses=array_values(array_filter($this->store->read('verses'),fn($v)=>($v['book_id']??'')===$m[1] && ($v['reviewed']??false)===true && (!array_key_exists('published',$v) || $v['published']===true)));
@@ -58,6 +63,8 @@ final class Api {
             foreach($this->store->read('chapters') as $chapter) if(($chapter['id']??'')===$chapterId && ($chapter['status']??'')==='published') {
                 self::respond(200,['data'=>$chapter]);
             }
+            $source=$this->corpus->chapter($m[1],$m[2],$m[3]);
+            if($source!==null)self::respond(200,['data'=>$source]);
             self::respond(404,['error'=>'Published chapter not found']);
         }
         // Public read APIs. Content status is explicit: catalogue entries are not published papers.
@@ -67,8 +74,19 @@ final class Api {
             if ($book!=='') $items=array_values(array_filter($items,fn($v)=>($v['book_id']??'')===$book));
             $published=[];
             foreach($this->store->read('chapters') as $chapter)if(($chapter['status']??'')==='published') $published[$chapter['id']]=$chapter;
+            $sourceIndexes=[];
+            foreach($items as $section) {
+                $id=$section['book_id'];
+                if(!isset($sourceIndexes[$id]))$sourceIndexes[$id]=$this->corpus->chapterIndex($id);
+            }
             foreach($items as &$section)foreach($section['chapters'] as &$chapter){
                 $key=$section['book_id'].'/'.$section['slug'].'/'.$chapter['slug'];
+                $sourceKey=$section['slug'].'/'.$chapter['slug'];
+                if(isset($sourceIndexes[$section['book_id']][$sourceKey])){
+                    $source=$sourceIndexes[$section['book_id']][$sourceKey];
+                    $chapter['status']='source-edition';$chapter['passage_count']=$source['passage_count'];
+                    if(empty($chapter['title'])&&$source['source_title'])$chapter['title']=$source['source_title'];
+                }
                 if(isset($published[$key])){$chapter['status']='published';$chapter['title']=$published[$key]['title'];$chapter['passage_count']=count($published[$key]['passages']??[]);}
             }
             unset($section,$chapter);

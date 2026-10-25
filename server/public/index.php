@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__.'/../src/StoreInterface.php';
 require_once __DIR__.'/../src/FileStore.php';
+require_once __DIR__.'/../src/CorpusStore.php';
 require_once __DIR__.'/../src/SearchService.php';
 require_once __DIR__.'/../src/Api.php';
 use AyurSutra\Api;

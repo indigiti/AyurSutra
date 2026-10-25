@@ -5,7 +5,7 @@ use AyurSutra\Support\StoreInterface;
 
 /** Public read-only academy search. No unpublished data, answer keys or draft counts. */
 final class SearchService {
-    public function __construct(private readonly StoreInterface $store) {}
+    public function __construct(private readonly StoreInterface $store, private readonly ?CorpusStore $corpus=null) {}
     private static function matches(string $haystack, string $needle): bool {
         // Unicode-aware; works on shared hosting without the optional mbstring extension.
         return preg_match('/'.preg_quote($needle, '/').'/iu', $haystack) === 1;
@@ -47,6 +47,9 @@ final class SearchService {
                     $items[]=['type'=>'passage','status'=>'published','title'=>$title.' · '.($passage['reference']??''),'description'=>self::excerpt((string)($passage['text_devanagari']??$passage['text_iast']??'')),'path'=>$url.'#'.rawurlencode((string)($passage['id']??''))];
                 }
             }
+        }
+        if ($include('texts') && $this->corpus!==null && count($items)<$limit) {
+            $items=array_merge($items,$this->corpus->search($query,$limit-count($items)));
         }
         if ($include('notes')) {
             foreach($this->store->read('notes') as $note){
