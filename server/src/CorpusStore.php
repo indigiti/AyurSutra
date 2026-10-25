@@ -47,7 +47,7 @@ final class CorpusStore {
                 foreach($this->chapters($book['id'],$section['slug']) as $chapter){
                     $path='/library/'.$book['id'].'/'.$section['slug'].'/'.$chapter['chapter_slug'];
                     foreach($chapter['passages']??[] as $passage){
-                        $s=(string)($passage['text_iast']??'');
+                        $s=trim((string)($passage['text_iast']??'').' '.(string)($passage['text_devanagari']??''));
                         if($s==='' || preg_match('/'.preg_quote($query,'/').'/iu',$s)!==1)continue;
                         $matches[]=['type'=>'passage','status'=>'source-edition',
                             'title'=>($chapter['source_title']??$chapter['title']).' · '.($passage['reference']??''),
