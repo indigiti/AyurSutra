@@ -1,0 +1,13 @@
+{
+  "source": "https://sa.wikisource.org/wiki/माधवनिदानम्?oldid=75848",
+  "source_revision": 75848,
+  "source_wikitext_sha256": "d726be9abd42def48814c5dec748b295e6a887cc9697c9df3deec8e41bacd44b",
+  "license": "CC BY-SA 4.0, contributors credited through source revision",
+  "diagnostic_chapter_total": 68,
+  "already_present": 1,
+  "new_draft_chapters": 67,
+  "source_lines": 3265,
+  "appendices_excluded": 2,
+  "draft_action_run": "https://github.com/indigiti/AyurSutra/actions/runs/40171638009",
+  "editorial_status": "unreviewed, not published"
+}

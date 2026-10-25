@@ -1,20 +1,22 @@
 # AyurSutra · The Living Library of Ayurveda
 
+> **October 2026 release-hardening status:** Read docs/MILESTONES-M1-M5.md and docs/STAGING-ACCEPTANCE.md before promoting a build. CI tests the frontend and API, Chromium browser paths, editorial attestation, authentication throttling, indexed search, and corpus mapping. The source corpus maps **644 classical chapters** across five works, of which **643 currently contain readable source passages**. The remaining Suśruta Śārīrasthāna chapter 10 has no passages in the bundled SARIT transcription. Two additional Mādhava appendix entries are catalogue-only. Newly sourced chapters are explicitly **unproofread CC BY-SA 4.0 transcriptions**; source extraction does not imply independent scholarly review. This is not proof of complete translations, examination question banks, or production acceptance. Actual full Ayana-owned datasets and Cloudways staging validation are still outstanding.
+
 Premium React + TypeScript + Vite frontend and a **modular PHP 8.x API without a database**. Includes classical-text catalogue, real cited sample passages, reader controls, saved verses, daily MCQs, research area, editorial drafts and future-membership preview.
 
 ## Quick start
 
-Requires Node.js 20+, npm and PHP 8.2+ (`json`, `mbstring`, `dom` extension for imports). In two local shells:
+Requires Node.js 22+, npm and PHP 8.2+ (`json`, `mbstring`, `dom` extension for imports). In two local shells:
 
 ```bash
-npm install
+npm ci
 php -S 127.0.0.1:8000 -t server/public server/public/router.php
 npm run dev
 ```
 
 Visit `http://localhost:5173`. Vite proxies `/api` to the PHP development server.
 
-`npm run build` compiles assets and prerenders 10 public React routes into `dist/`. Set `SITE_URL=https://your-public-domain.example` for canonical tags and a sitemap. `npm run preview` previews the built site. `php tests/api-smoke.php` runs a dependency-free storage test.
+`npm run build` compiles assets and prerenders the public routes plus all source-backed chapter URLs into `dist/`. Set `SITE_URL=https://your-public-domain.example` for canonical tags and a sitemap. `npm run preview` previews the built site. `php tests/api-smoke.php` runs a dependency-free storage test.
 
 ## Admin access
 
@@ -24,7 +26,7 @@ Visit `http://localhost:5173`. Vite proxies `/api` to the PHP development server
 
 ## Source texts and imports
 
-`docs/sources.json` lists source URLs, licences, edition context and review requirements. The currently bundled reader contains **only three cited sample passages**, not the five full works. Source texts must be reviewed before import.
+`docs/sources.json` lists source URLs, licences, edition context and review requirements. The classical reader contains full attributed source transcriptions from four SARIT editions and 68 original-source chapters of Madhava Nidana. These are **not independently proofread, translated, or clinical guidance**. The three additional editorial samples are separate from the attributed digital corpus.
 
 To stage a downloaded, authorized SARIT TEI XML file without publishing it:
 

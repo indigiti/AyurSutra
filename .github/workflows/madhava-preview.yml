@@ -1,0 +1,35 @@
+name: Madhava source extraction preview
+on:
+  push:
+    branches: [hardening/m1-m5-release-foundation]
+    paths:
+      - 'scripts/stage-madhava-wikisource.py'
+      - '.github/workflows/madhava-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Preview the approved CC-licensed source without publishing
+        id: fetch
+        continue-on-error: true
+        run: |
+          mkdir -p "$RUNNER_TEMP/madhava"
+          python3 scripts/stage-madhava-wikisource.py --fetch --output "$RUNNER_TEMP/madhava/owner-review-drafts.json" | tee "$RUNNER_TEMP/madhava/report.json"
+      - name: Preserve draft preview as a short-lived restricted review artifact
+        if: steps.fetch.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: madhava-unreviewed-chapters
+          path: ${{ runner.temp }}/madhava/
+          retention-days: 7
+          if-no-files-found: error
+      - name: Explain why no source artifact was generated
+        if: steps.fetch.outcome != 'success'
+        run: echo 'Wikisource returned no safely parseable 68-chapter + 2-appendix wikitext structure. Do not publish anything; review source markup and manually reconcile.'

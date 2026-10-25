@@ -1,7 +1,47 @@
 [
-  {"id":"charaka-samhita","title":"Charaka Samhita","source_id":"sarit-caraka","status":"sample-only","chapters_indexed":0},
-  {"id":"sushruta-samhita","title":"Sushruta Samhita","source_id":"sarit-sushruta","status":"sample-only","chapters_indexed":0},
-  {"id":"ashtanga-hridaya","title":"Ashtanga Hridaya","source_id":"sarit-hridaya","status":"awaiting-import","chapters_indexed":0},
-  {"id":"ashtanga-sangraha","title":"Ashtanga Sangraha","source_id":"sarit-sangraha","status":"awaiting-import","chapters_indexed":0},
-  {"id":"madhava-nidana","title":"Madhava Nidana","source_id":"wikisource-madhava","status":"awaiting-import","chapters_indexed":0}
+  {
+    "id": "charaka-samhita",
+    "title": "Charaka Samhita",
+    "source_id": "sarit-caraka",
+    "status": "source-edition-unproofread",
+    "chapters_indexed": 120,
+    "source_chapters_mapped": 120,
+    "source_chapters_with_passages": 120
+  },
+  {
+    "id": "sushruta-samhita",
+    "title": "Sushruta Samhita",
+    "source_id": "sarit-sushruta",
+    "status": "partial-source-edition",
+    "chapters_indexed": 186,
+    "source_chapters_mapped": 186,
+    "source_chapters_with_passages": 185
+  },
+  {
+    "id": "ashtanga-hridaya",
+    "title": "Ashtanga Hridaya",
+    "source_id": "sarit-hridaya",
+    "status": "source-edition-unproofread",
+    "chapters_indexed": 120,
+    "source_chapters_mapped": 120,
+    "source_chapters_with_passages": 120
+  },
+  {
+    "id": "ashtanga-sangraha",
+    "title": "Ashtanga Sangraha",
+    "source_id": "sarit-sangraha",
+    "status": "source-edition-unproofread",
+    "chapters_indexed": 150,
+    "source_chapters_mapped": 150,
+    "source_chapters_with_passages": 150
+  },
+  {
+    "id": "madhava-nidana",
+    "title": "Madhava Nidana",
+    "source_id": "wikisource-madhava",
+    "status": "source-edition-unproofread",
+    "chapters_indexed": 68,
+    "source_chapters_mapped": 68,
+    "source_chapters_with_passages": 68
+  }
 ]

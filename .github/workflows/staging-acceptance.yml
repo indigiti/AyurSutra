@@ -1,0 +1,36 @@
+name: Cloudways staging read-only acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: 'Explicit HTTPS Cloudways staging origin, not production'
+        required: true
+        type: string
+      max_p95_ms:
+        description: 'Request p95 limit in milliseconds'
+        required: true
+        default: '2500'
+        type: string
+permissions:
+  contents: read
+jobs:
+  staging-probe:
+    environment: staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Read-only staging verification
+        env:
+          TARGET_SITE_URL: ${{ inputs.site_url }}
+          MAX_P95_MS: ${{ inputs.max_p95_ms }}
+        run: python3 scripts/staging-probe.py --base-url "$TARGET_SITE_URL" --max-p95-ms "$MAX_P95_MS"
+      - name: Publish acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-health
+          path: staging-health.json
+          if-no-files-found: ignore

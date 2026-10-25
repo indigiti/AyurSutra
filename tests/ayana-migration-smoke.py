@@ -48,7 +48,8 @@ with tempfile.TemporaryDirectory() as tmp:
         code,private=api('chapters/sushruta-samhita/sutrasthanam/vedotpattyadhyayah');assert code==404
         code,unauth=api('admin/chapters');assert code==401
         code,stats=api('admin/import-status',auth=True);assert code==200 and stats['data']['chapters']['draft']==1
-        code,published=api('admin/chapters/publish','POST',{'id':'sushruta-samhita/sutrasthanam/vedotpattyadhyayah'},True);assert code==200
+        code,rejected=api('admin/chapters/publish','POST',{'id':'sushruta-samhita/sutrasthanam/vedotpattyadhyayah'},True);assert code==422
+        code,published=api('admin/chapters/publish','POST',{'id':'sushruta-samhita/sutrasthanam/vedotpattyadhyayah','review':{'reviewer':'Test Editor','edition':'Synthetic test edition','notes':'Smoke validation','text_checked':True,'rights_confirmed':True}},True);assert code==200
         code,public=api('chapters/sushruta-samhita/sutrasthanam/vedotpattyadhyayah');assert code==200
         assert public['data']['passages'][0]['reference']=='1.1' and public['data']['passages'][0]['commentary']=='Test-only commentary'
         code,index=api('sections?book_id=sushruta-samhita');assert code==200 and index['data'][0]['chapters'][0]['status']=='published'

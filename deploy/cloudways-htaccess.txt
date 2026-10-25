@@ -8,3 +8,12 @@ RewriteRule ^ index.html [L]
 <FilesMatch "^(?:\.env|\.git.*)$">
  Require all denied
 </FilesMatch>
+
+# Harden the public frontend; verify mod_headers and proxy behavior on Cloudways staging.
+<IfModule mod_headers.c>
+ Header always set X-Content-Type-Options "nosniff"
+ Header always set X-Frame-Options "DENY"
+ Header always set Referrer-Policy "strict-origin-when-cross-origin"
+ Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+ Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'"
+</IfModule>

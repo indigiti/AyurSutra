@@ -1,7 +1,54 @@
 [
- {"id":"sarit-caraka","book_id":"charaka-samhita","work":"Carakasaṃhitā","format":"TEI XML","url":"https://github.com/sarit/SARIT-corpus/blob/master/carakasamhita.xml","license":"CC BY-SA 3.0","attribution":"SARIT contributors; consult TEI source header","status":"source-identified"},
- {"id":"sarit-sushruta","book_id":"sushruta-samhita","work":"Suśrutasaṃhitā","format":"TEI XML","url":"https://github.com/sarit/SARIT-corpus/blob/master/susrutasamhita.xml","license":"CC BY-SA 3.0","attribution":"Tsutomu Yamashita, Yasutaka Muroya and SARIT; consult TEI source header","status":"source-identified"},
- {"id":"sarit-hridaya","book_id":"ashtanga-hridaya","work":"Aṣṭāṅgahṛdayasaṃhitā","format":"TEI XML","url":"https://github.com/sarit/SARIT-corpus/blob/master/astangahrdayasamhita.xml","license":"Review edition header and repository licence","attribution":"SARIT; consult TEI source header","status":"licence-review-required"},
- {"id":"sarit-sangraha","book_id":"ashtanga-sangraha","work":"Aṣṭāṅgasaṅgraha","format":"TEI XML","url":"https://github.com/sarit/SARIT-corpus/blob/master/astangasangraha.xml","license":"CC BY-SA 3.0","attribution":"SARIT contributors; consult TEI source header","status":"source-identified"},
- {"id":"wikisource-madhava","book_id":"madhava-nidana","work":"Mādhavanidāna","format":"Wikisource HTML","url":"https://sa.wikisource.org/wiki/माधवनिदानम्","license":"Review the specific source/version before import","attribution":"Sanskrit Wikisource and original contributors","status":"licence-review-required"}
+  {
+    "id": "sarit-caraka",
+    "book_id": "charaka-samhita",
+    "work": "Carakasaṃhitā",
+    "format": "TEI XML",
+    "url": "https://github.com/sarit/SARIT-corpus/blob/master/carakasamhita.xml",
+    "license": "CC BY-SA 3.0",
+    "attribution": "SARIT contributors; consult TEI source header",
+    "status": "source-identified"
+  },
+  {
+    "id": "sarit-sushruta",
+    "book_id": "sushruta-samhita",
+    "work": "Suśrutasaṃhitā",
+    "format": "TEI XML",
+    "url": "https://github.com/sarit/SARIT-corpus/blob/master/susrutasamhita.xml",
+    "license": "CC BY-SA 3.0",
+    "attribution": "Tsutomu Yamashita, Yasutaka Muroya and SARIT; consult TEI source header",
+    "status": "source-identified"
+  },
+  {
+    "id": "sarit-hridaya",
+    "book_id": "ashtanga-hridaya",
+    "work": "Aṣṭāṅgahṛdayasaṃhitā",
+    "format": "TEI XML",
+    "url": "https://github.com/sarit/SARIT-corpus/blob/master/astangahrdayasamhita.xml",
+    "license": "Review edition header and repository licence",
+    "attribution": "SARIT; consult TEI source header",
+    "status": "licence-review-required"
+  },
+  {
+    "id": "sarit-sangraha",
+    "book_id": "ashtanga-sangraha",
+    "work": "Aṣṭāṅgasaṅgraha",
+    "format": "TEI XML",
+    "url": "https://github.com/sarit/SARIT-corpus/blob/master/astangasangraha.xml",
+    "license": "CC BY-SA 3.0",
+    "attribution": "SARIT contributors; consult TEI source header",
+    "status": "source-identified"
+  },
+  {
+    "id": "wikisource-madhava",
+    "book_id": "madhava-nidana",
+    "work": "Mādhavanidāna",
+    "format": "MediaWiki wikitext original source",
+    "url": "https://sa.wikisource.org/wiki/माधवनिदानम्?oldid=75848",
+    "license": "CC BY-SA 4.0 for Wikisource transcription; cross-reference chapter 1 requires its own rights review",
+    "attribution": "Sanskrit Wikisource contributors at revision 75848 (opening chapter additionally cross-referenced to a separate mirror)",
+    "status": "source-transcription-unproofread",
+    "source_revision": 75848,
+    "source_sha256": "d726be9abd42def48814c5dec748b295e6a887cc9697c9df3deec8e41bacd44b"
+  }
 ]

@@ -1,0 +1,40 @@
+name: Pin and import unproofread Madhava Wikisource source
+on:
+  push:
+    branches: [hardening/m1-m5-release-foundation]
+    paths: ['scripts/promote-madhava-source.py']
+permissions:
+  contents: write
+jobs:
+  import-source-edition:
+    if: github.repository == 'indigiti/AyurSutra'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Recover registered source and verify exact Wikisource revision SHA-256
+        run: |
+          mkdir -p "$RUNNER_TEMP/madhava"
+          python3 scripts/stage-madhava-wikisource.py --fetch --output "$RUNNER_TEMP/madhava/draft.json" > "$RUNNER_TEMP/madhava/report.json"
+          python3 - "$RUNNER_TEMP/madhava/report.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          assert d['revision']==75848 and d['source_sha256']=='d726be9abd42def48814c5dec748b295e6a887cc9697c9df3deec8e41bacd44b', 'Wikisource source has changed'
+          assert d['staged_draft_chapters']==67 and d['passages']==3265
+          PY
+      - name: Convert to attributed explicitly unproofread source edition
+        run: |
+          python3 scripts/promote-madhava-source.py --draft "$RUNNER_TEMP/madhava/draft.json" --storage server/storage --source-sha256 d726be9abd42def48814c5dec748b295e6a887cc9697c9df3deec8e41bacd44b --apply
+          python3 tests/corpus-integrity.py
+      - name: Commit only whitelisted public source transcription files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/storage/corpus/sections/madhava-nidana-madhavanidana.json server/storage/corpus/manifest.json server/storage/books.json
+          git diff --cached --exit-code && exit 0 || true
+          git commit -m "feat(corpus): add 67 CC-licensed unproofread Madhava source chapters"
+          git push origin HEAD:hardening/m1-m5-release-foundation

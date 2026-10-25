@@ -10,7 +10,9 @@
     "dev:api": "php -S 127.0.0.1:8000 -t server/public server/public/router.php",
     "check": "tsc --noEmit",
     "test:php": "php tests/api-smoke.php",
-    "cap:sync": "npx cap sync"
+    "cap:sync": "npx cap sync",
+    "test:e2e": "playwright test",
+    "test:corpus": "python3 tests/corpus-integrity.py"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.0",
@@ -31,6 +33,7 @@
     "@capacitor/cli": "^7.0.0",
     "@capacitor/android": "^7.0.0",
     "@capacitor/ios": "^7.0.0",
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.24.0",
+    "@playwright/test": "^1.56.0"
   }
 }

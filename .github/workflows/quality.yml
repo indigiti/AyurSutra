@@ -1,7 +1,7 @@
 name: AyurSutra checks
 on:
   push:
-    branches: [main]
+    branches: [main, hardening/m1-m5-release-foundation, staging/ayursutra]
   pull_request:
     branches: [main]
 jobs:
@@ -25,6 +25,15 @@ jobs:
           python tests/ayana-migration-smoke.py
           python tests/search-api-smoke.py
           python tests/corpus-api-smoke.py
+          python tests/corpus-integrity.py
+          python tests/madhava-promotion-smoke.py
+          python tests/madhava-staging-smoke.py
+          python tests/admin-auth-limit-smoke.py
+          python tests/admin-roles-smoke.py
+          python tests/storage-snapshot-smoke.py
+          python tests/digiops-staging-smoke.py
+          python tests/search-index-smoke.py
+          python scripts/build-search-index.py --corpus server/storage/corpus --output "$RUNNER_TEMP/ayursutra-search-index"
   react-build:
     runs-on: ubuntu-latest
     steps:
@@ -33,6 +42,43 @@ jobs:
         with:
           node-version: '22'
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Build prerendered React application
+        env:
+          VITE_BASE_PATH: /ayursutra/
         run: npm run build
+      - name: Package segregated Cloudways staging release
+        run: python3 scripts/package-cloudways.py --output "$RUNNER_TEMP/ayursutra-cloudways-staging.zip"
+      - name: Publish deployable staged application package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ayursutra-cloudways-staging
+          path: ${{ runner.temp }}/ayursutra-cloudways-staging.zip
+          if-no-files-found: error
+          retention-days: 14
+      - name: Assemble DigiOps-compatible release
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging/ayursutra')
+        run: python3 scripts/package-digiops-staging.py --dist dist --out release
+      - name: Publish exact DigiOps release artifact
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging/ayursutra')
+        uses: actions/upload-artifact@v4
+        with:
+          name: digiops-release
+          path: release/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, dom, json
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

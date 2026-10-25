@@ -6,11 +6,25 @@ use Throwable;
 
 final class Api {
     private readonly CorpusStore $corpus;
-    public function __construct(private readonly StoreInterface $store, private readonly string $adminToken) {
-        $storage=getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage';
-        $this->corpus=new CorpusStore(getenv('AYURSUTRA_CORPUS_PATH') ?: rtrim($storage,'/').'/corpus');
+    private readonly string $storagePath;
+    private ?array $adminIdentity=null;
+    private static ?array $auditContext=null;
+    public function __construct(
+        private readonly StoreInterface $store,
+        private readonly string $adminToken,
+        ?string $storageOverride=null,
+        ?string $corpusOverride=null
+    ) {
+        $this->storagePath=$storageOverride ?: (getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage');
+        $this->corpus=new CorpusStore($corpusOverride ?: (getenv('AYURSUTRA_CORPUS_PATH') ?: rtrim($this->storagePath,'/').'/corpus'));
     }
     private static function respond(int $status, array $body): never {
+        if($status>=200&&$status<300&&self::$auditContext!==null){
+            $context=self::$auditContext;
+            self::$auditContext=null;
+            try{(new AuditTrail($context['storage']))->append($context['identity'],$context['method'],$context['path'],$status);}
+            catch(\Throwable $e){error_log('AyurSutra audit failure: '.$e->getMessage());$status=500;$body=['error'=>'Audit storage unavailable; verify whether the preceding operation was applied'];}
+        }
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
         header('X-Content-Type-Options: nosniff');
@@ -28,7 +42,19 @@ final class Api {
     private function authorize(): void {
         $authorization=$_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
         $provided=str_starts_with($authorization,'Bearer ')?substr($authorization,7):'';
-        if (strlen($this->adminToken)<32 || !hash_equals($this->adminToken,$provided)) self::respond(401,['error'=>'Unauthorized']);
+        // Client address is obtained from the trusted web server, not an untrusted forwarded header.
+        $remote=(string)($_SERVER['REMOTE_ADDR']??'unknown');
+        $storage=$this->storagePath;
+        $identity=AdminIdentity::resolve($provided,$this->adminToken);
+        $status=(new AdminAuthLimiter($storage.'/private/auth-limits'))->evaluate($remote,$identity!==null);
+        if($status===429)self::respond(429,['error'=>'Too many failed authentication attempts. Try again later.']);
+        if($status!==200 || $identity===null)self::respond(401,['error'=>'Unauthorized']);
+        $this->adminIdentity=$identity;
+    }
+    private function requireRole(string $role): void {
+        if(($this->adminIdentity===null)||
+           AdminIdentity::LEVELS[$this->adminIdentity['role']]<AdminIdentity::LEVELS[$role])
+            self::respond(403,['error'=>'Insufficient editorial privileges']);
     }
     public function run(): never {
         try {$this->dispatch();} catch (Throwable $e) {
@@ -39,6 +65,8 @@ final class Api {
     private function dispatch(): never {
         $path=parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
         $path='/'.trim((string)$path,'/');
+        $base=rtrim((string)($_SERVER['AYURSUTRA_BASE_PATH']??getenv('AYURSUTRA_BASE_PATH')?:''),'/');
+        if($base!=='' && $base!=='/' && str_starts_with($path,$base.'/'))$path=substr($path,strlen($base));
         if (str_starts_with($path,'/api/v1/')) $path=substr($path,7);
         $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');
         if ($method==='OPTIONS') self::respond(405,['error'=>'CORS preflight not supported; use same origin']);
@@ -129,7 +157,18 @@ final class Api {
         }
         if (str_starts_with($path,'/admin/')) {
             $this->authorize();
-            if ($method==='GET' && $path==='/admin/status') self::respond(200,['ok'=>true,'storage'=>'JSON file collections','role'=>'editor']);
+            $this->requireRole($method==='GET'?'viewer':(str_ends_with($path,'/publish')?'publisher':'editor'));
+            if ($method!=='GET')self::$auditContext=[
+                'storage'=>$this->storagePath,
+                'identity'=>$this->adminIdentity,'method'=>$method,'path'=>$path
+            ];
+            if ($method==='GET' && $path==='/admin/status') self::respond(200,[
+                'ok'=>true,'storage'=>'JSON file collections','role'=>$this->adminIdentity['role'],'account'=>$this->adminIdentity['id']]);
+            if ($method==='GET' && $path==='/admin/audit') {
+                $this->requireRole('admin');
+                $storage=$this->storagePath;
+                self::respond(200,['data'=>(new AuditTrail($storage))->latest(50)]);
+            }
             if ($method==='GET' && $path==='/admin/import-status') {
                 $chapters=$this->store->read('chapters');$exams=$this->store->read('exams');$notes=$this->store->read('notes');
                 $count=static fn($items,$status)=>count(array_filter($items,static fn($v)=>($v['status']??'')===$status));
@@ -189,10 +228,28 @@ final class Api {
             if ($method==='POST' && $path==='/admin/chapters/publish') {
                 $payload=self::body();$id=$payload['id']??null;
                 if(!is_string($id)||!preg_match('~^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$~D',$id))self::respond(422,['error'=>'Invalid chapter ID']);
+                // An editor must attest to specific source and rights checks before publication.
+                // This is recorded provenance, not a claim of independent scholarly peer review.
+                $review=$payload['review']??null;
+                if(!is_array($review)||array_is_list($review))self::respond(422,['error'=>'An editorial review record is required']);
+                $reviewer=trim((string)($review['reviewer']??''));
+                $edition=trim((string)($review['edition']??''));
+                $notes=trim((string)($review['notes']??''));
+                if(strlen($reviewer)<3||strlen($reviewer)>120||strlen($edition)<3||strlen($edition)>240||strlen($notes)>2000
+                   ||($review['text_checked']??false)!==true||($review['rights_confirmed']??false)!==true)
+                    self::respond(422,['error'=>'Reviewer, source edition, text check and reuse-rights confirmation are mandatory']);
                 $found=false;
-                $this->store->mutate('chapters',static function($items)use($id,&$found){
+                $this->store->mutate('chapters',static function($items)use($id,&$found,$reviewer,$edition,$notes){
                     foreach($items as &$item) if(($item['id']??'')===$id && !empty($item['passages'])) {
-                        $found=true;$item['status']='published';$item['published_at']=gmdate('c');break;
+                        $found=true;
+                        // Keep an immutable snapshot of who attested to which imported text.
+                        $item['editorial_review']=[
+                            'reviewer'=>$reviewer,'edition'=>$edition,'notes'=>$notes,
+                            'text_checked'=>true,'rights_confirmed'=>true,
+                            'source_url'=>$item['source_url']??'','source_hash'=>$item['source_hash']??'',
+                            'reviewed_at'=>gmdate('c')
+                        ];
+                        $item['status']='published';$item['published_at']=gmdate('c');break;
                     }
                     unset($item);return $items;
                 });
