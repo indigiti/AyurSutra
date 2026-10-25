@@ -6,11 +6,19 @@ use Throwable;
 
 final class Api {
     private readonly CorpusStore $corpus;
+    private ?array $adminIdentity=null;
+    private static ?array $auditContext=null;
     public function __construct(private readonly StoreInterface $store, private readonly string $adminToken) {
         $storage=getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage';
         $this->corpus=new CorpusStore(getenv('AYURSUTRA_CORPUS_PATH') ?: rtrim($storage,'/').'/corpus');
     }
     private static function respond(int $status, array $body): never {
+        if($status>=200&&$status<300&&self::$auditContext!==null){
+            $context=self::$auditContext;
+            self::$auditContext=null;
+            try{(new AuditTrail($context['storage']))->append($context['identity'],$context['method'],$context['path'],$status);}
+            catch(\Throwable $e){error_log('AyurSutra audit failure: '.$e->getMessage());$status=500;$body=['error'=>'Audit storage unavailable; verify whether the preceding operation was applied'];}
+        }
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
         header('X-Content-Type-Options: nosniff');
@@ -30,11 +38,17 @@ final class Api {
         $provided=str_starts_with($authorization,'Bearer ')?substr($authorization,7):'';
         // Client address is obtained from the trusted web server, not an untrusted forwarded header.
         $remote=(string)($_SERVER['REMOTE_ADDR']??'unknown');
-        $valid=strlen($this->adminToken)>=32 && hash_equals($this->adminToken,$provided);
         $storage=getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage';
-        $status=(new AdminAuthLimiter($storage.'/private/auth-limits'))->evaluate($remote,$valid);
+        $identity=AdminIdentity::resolve($provided,$this->adminToken);
+        $status=(new AdminAuthLimiter($storage.'/private/auth-limits'))->evaluate($remote,$identity!==null);
         if($status===429)self::respond(429,['error'=>'Too many failed authentication attempts. Try again later.']);
-        if($status!==200)self::respond(401,['error'=>'Unauthorized']);
+        if($status!==200 || $identity===null)self::respond(401,['error'=>'Unauthorized']);
+        $this->adminIdentity=$identity;
+    }
+    private function requireRole(string $role): void {
+        if(($this->adminIdentity===null)||
+           AdminIdentity::LEVELS[$this->adminIdentity['role']]<AdminIdentity::LEVELS[$role])
+            self::respond(403,['error'=>'Insufficient editorial privileges']);
     }
     public function run(): never {
         try {$this->dispatch();} catch (Throwable $e) {
@@ -135,7 +149,18 @@ final class Api {
         }
         if (str_starts_with($path,'/admin/')) {
             $this->authorize();
-            if ($method==='GET' && $path==='/admin/status') self::respond(200,['ok'=>true,'storage'=>'JSON file collections','role'=>'editor']);
+            $this->requireRole($method==='GET'?'viewer':(str_ends_with($path,'/publish')?'publisher':'editor'));
+            if ($method!=='GET')self::$auditContext=[
+                'storage'=>getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage',
+                'identity'=>$this->adminIdentity,'method'=>$method,'path'=>$path
+            ];
+            if ($method==='GET' && $path==='/admin/status') self::respond(200,[
+                'ok'=>true,'storage'=>'JSON file collections','role'=>$this->adminIdentity['role'],'account'=>$this->adminIdentity['id']]);
+            if ($method==='GET' && $path==='/admin/audit') {
+                $this->requireRole('admin');
+                $storage=getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage';
+                self::respond(200,['data'=>(new AuditTrail($storage))->latest(50)]);
+            }
             if ($method==='GET' && $path==='/admin/import-status') {
                 $chapters=$this->store->read('chapters');$exams=$this->store->read('exams');$notes=$this->store->read('notes');
                 $count=static fn($items,$status)=>count(array_filter($items,static fn($v)=>($v['status']??'')===$status));
