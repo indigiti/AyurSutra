@@ -32,3 +32,20 @@ test('MCQ catalogue does not pretend unavailable papers are published',async({pa
   await page.getByRole('button',{name:/Finish & review answers/i}).click();
   await expect(page.getByText('PRACTICE COMPLETE')).toBeVisible();
 });
+
+
+test('source-inspired chapter reader allows search, transliteration and passage bookmarks',async({page})=>{
+ await page.goto('/library/sushruta-samhita/sutrasthanam/vedotpattyadhyayah');
+ await expect(page.getByRole('region',{name:'Classical Sanskrit reader'})).toBeVisible();
+ await expect(page.getByRole('heading',{level:1})).toContainText('1.');
+ await expect(page.getByRole('group',{name:'Text script'}).getByRole('button',{name:/Devanagari/i})).toBeEnabled();
+ await expect(page.getByRole('button',{name:'Telugu'})).toBeDisabled();
+ await page.getByRole('search').getByRole('textbox',{name:/Search passage text/i}).fill('this phrase is not in the source');
+ await page.getByRole('search').getByRole('button',{name:'Search'}).click();
+ await expect(page.getByRole('heading',{name:'No matching passages'})).toBeVisible();
+ await page.getByRole('button',{name:'Show all passages'}).click();
+ await expect(page.locator('.source-shloka-card').first()).toBeVisible();
+ await page.getByRole('button',{name:'Save passage'}).first().click();
+ await page.goto('/my-library');
+ await expect(page.getByRole('link',{name:'Open passage'}).last()).toBeVisible();
+});
