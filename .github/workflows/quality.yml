@@ -1,0 +1,38 @@
+name: AyurSutra checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  php-and-content-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, dom, json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: PHP syntax check
+        run: find server scripts -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: PHP API regression checks
+        run: |
+          php tests/api-smoke.php
+          python tests/academy-api-smoke.py
+          python tests/ayana-migration-smoke.py
+          python tests/search-api-smoke.py
+          python tests/corpus-api-smoke.py
+  react-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build prerendered React application
+        run: npm run build
