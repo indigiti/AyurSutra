@@ -6,17 +6,17 @@ Premium React + TypeScript + Vite frontend and a **modular PHP 8.x API without a
 
 ## Quick start
 
-Requires Node.js 20+, npm and PHP 8.2+ (`json`, `mbstring`, `dom` extension for imports). In two local shells:
+Requires Node.js 22+, npm and PHP 8.2+ (`json`, `mbstring`, `dom` extension for imports). In two local shells:
 
 ```bash
-npm install
+npm ci
 php -S 127.0.0.1:8000 -t server/public server/public/router.php
 npm run dev
 ```
 
 Visit `http://localhost:5173`. Vite proxies `/api` to the PHP development server.
 
-`npm run build` compiles assets and prerenders 10 public React routes into `dist/`. Set `SITE_URL=https://your-public-domain.example` for canonical tags and a sitemap. `npm run preview` previews the built site. `php tests/api-smoke.php` runs a dependency-free storage test.
+`npm run build` compiles assets and prerenders the public routes plus all source-backed chapter URLs into `dist/`. Set `SITE_URL=https://your-public-domain.example` for canonical tags and a sitemap. `npm run preview` previews the built site. `php tests/api-smoke.php` runs a dependency-free storage test.
 
 ## Admin access
 
@@ -26,7 +26,7 @@ Visit `http://localhost:5173`. Vite proxies `/api` to the PHP development server
 
 ## Source texts and imports
 
-`docs/sources.json` lists source URLs, licences, edition context and review requirements. The currently bundled reader contains **only three cited sample passages**, not the five full works. Source texts must be reviewed before import.
+`docs/sources.json` lists source URLs, licences, edition context and review requirements. The classical reader contains full attributed source transcriptions from four SARIT editions and 68 original-source chapters of Madhava Nidana. These are **not independently proofread, translated, or clinical guidance**. The three additional editorial samples are separate from the attributed digital corpus.
 
 To stage a downloaded, authorized SARIT TEI XML file without publishing it:
 

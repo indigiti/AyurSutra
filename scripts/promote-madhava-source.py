@@ -30,8 +30,18 @@ def main():
  if not all(path.is_file() for path in (chapters_file,manifest_file,books_file)):
   raise ValueError("Required corpus files are missing")
  original=load(chapters_file); manifest=load(manifest_file);books=load(books_file)
- if original.get("book_id")!="madhava-nidana" or len(original.get("chapters",[]))!=1:
-  raise ValueError("Only first-chapter seed can be expanded; existing source may have changed")
+ if original.get("book_id")!="madhava-nidana":raise ValueError("Madhava source does not match")
+ if len(original.get("chapters",[]))==68:
+  saved=next((book for book in manifest["books"] if book.get("id")=="madhava-nidana"),None)
+  if (saved is None or saved.get("chapters")!=68 or saved.get("passages")!=3286
+      or len(saved["sections"][0]["chapters"])!=68
+      or not all(c.get("chapter_slug")==f"chapter-{i:02d}" for i,c in enumerate(original["chapters"],1))
+      or any(c.get("source_url")!=SOURCE_URL for c in original["chapters"][1:])):
+   raise ValueError("Previously imported source does not match the pinned expected edition")
+  print(json.dumps({"source_revision":75848,"already_imported":True,"source_chapters":68,"passages":3286,"unproofread":True}))
+  return
+ if len(original.get("chapters",[]))!=1:
+  raise ValueError("Only a first-chapter seed or verified 68-chapter corpus may be used")
  if original["chapters"][0].get("chapter_slug")!="chapter-01":raise ValueError("Seed chapter mismatch")
  all_chapters=list(original["chapters"])
  index_items=[]

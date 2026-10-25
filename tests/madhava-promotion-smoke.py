@@ -8,6 +8,17 @@ with tempfile.TemporaryDirectory() as tmp:
   source=root/"server/storage"/path
   dest=directory/path
   shutil.copyfile(source,dest)
+ # Synthetic test reproduces the one-chapter pre-migration fixture without altering repository sources.
+ corpus_file=directory/"corpus/sections/madhava-nidana-madhavanidana.json"
+ old=json.loads(corpus_file.read_text())
+ old["chapters"]=old["chapters"][:1]
+ corpus_file.write_text(json.dumps(old,ensure_ascii=False))
+ manifest_file=directory/"corpus/manifest.json"
+ manifest=json.loads(manifest_file.read_text())
+ record=next(b for b in manifest["books"] if b["id"]=="madhava-nidana")
+ record["sections"][0]["chapters"]=record["sections"][0]["chapters"][:1]
+ record["chapters"]=1;record["passages"]=len(old["chapters"][0]["passages"])
+ manifest_file.write_text(json.dumps(manifest,ensure_ascii=False))
  draft={"format":"ayursutra-ay-1","chapters":[]}
  for n in range(2,69):
   draft["chapters"].append({"book_id":"madhava-nidana","section_slug":"madhavanidana",
@@ -27,5 +38,6 @@ with tempfile.TemporaryDirectory() as tmp:
  assert len(chapters)==68 and sum(len(c["passages"]) for c in chapters)==3286
  assert chapters[1]["verification"].startswith("Unproofread")
  run=subprocess.run(cmd+["--apply"],cwd=root,capture_output=True,text=True)
- assert run.returncode!=0,"Cannot re-import over existing source"
+ assert run.returncode==0,"Idempotent import must verify existing pinned source"
+ assert json.loads(run.stdout)["already_imported"] is True
  print("PASS: pinned 67-chapter conversion, no dry-run writes, 68 chapter count, unproofread warnings")
