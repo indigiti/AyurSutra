@@ -1,7 +1,7 @@
 name: AyurSutra checks
 on:
   push:
-    branches: [main, hardening/m1-m5-release-foundation]
+    branches: [main, hardening/m1-m5-release-foundation, staging/ayursutra]
   pull_request:
     branches: [main]
 jobs:

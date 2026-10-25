@@ -1,3 +1,4 @@
+import {apiBase} from './site-paths';
 import {useEffect,useState} from 'react';
 import {CheckCircle2,FileQuestion,FileText,Upload} from 'lucide-react';
 type Exam={id:string;title:string;expected_count:number;imported_count:number;status:string};
@@ -13,7 +14,7 @@ export default function AcademyAdminTools({token,role}:{token:string;role:'viewe
  const [title,setTitle]=useState('');const [subject,setSubject]=useState('Shalya Tantra');const [level,setLevel]=useState('BAMS');const [body,setBody]=useState('');const [source,setSource]=useState('');
  const [reviewer,setReviewer]=useState('');const [edition,setEdition]=useState('');const [reviewNotes,setReviewNotes]=useState('');
  const [textChecked,setTextChecked]=useState(false);const [rightsConfirmed,setRightsConfirmed]=useState(false);
- async function request(path:string,method='GET',payload?:unknown){const r=await fetch('/api/v1/admin/'+path,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:payload===undefined?undefined:JSON.stringify(payload)});const j=await r.json();if(!r.ok)throw new Error(j.error||'Request failed');return j}
+ async function request(path:string,method='GET',payload?:unknown){const r=await fetch(apiBase+'admin/'+path,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:payload===undefined?undefined:JSON.stringify(payload)});const j=await r.json();if(!r.ok)throw new Error(j.error||'Request failed');return j}
  async function reload(){try{const [a,b,c,d]=await Promise.all([request('exams'),request('notes'),request('chapters'),request('import-status')]);setExams(a.data);setNotes(b.data);setChapterDrafts(c.data);setImportStats(d.data)}catch(e){setFeedback((e as Error).message)}}
  useEffect(()=>{void reload()},[token]);
  async function importChapter(){if(!chapterFile){setFeedback('Select an authorized chapter JSON file.');return}try{if(chapterFile.size>1400000)throw new Error('Use the bulk migration importer for chapters larger than 1.4 MB.');const data=JSON.parse(await chapterFile.text());const result=await request('chapters/import','POST',data);setFeedback(`Staged ${result.passage_count} original passages in ${result.id}. Publish after source review.`);await reload()}catch(e){setFeedback((e as Error).message)}}
