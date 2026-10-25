@@ -1,11 +1,17 @@
 // Builds actual, crawlable page HTML using the same React tree as the client.
-import {createServer} from 'vite';
+import {build} from 'esbuild';
+import {pathToFileURL} from 'node:url';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 const root=process.cwd();
-const server=await createServer({root,server:{middlewareMode:true},appType:'custom',logLevel:'error'});
+const entry=path.join(root,'dist','ayursutra-server-entry.mjs');
+await build({
+  entryPoints:[path.join(root,'src/entry-server.tsx')],
+  outfile:entry,platform:'node',format:'esm',target:'node22',
+  bundle:true,external:['react','react-dom','react-dom/server'],
+});
 try {
- const {render}=await server.ssrLoadModule('/src/entry-server.tsx');
+ const {render}=await import(pathToFileURL(entry).href);
  const dist=path.join(root,'dist');
  const template=await fs.readFile(path.join(dist,'index.html'),'utf8');
  const books=[['charaka-samhita','Charaka Samhita'],['sushruta-samhita','Sushruta Samhita'],['ashtanga-hridaya','Ashtanga Hridaya'],['ashtanga-sangraha','Ashtanga Sangraha'],['madhava-nidana','Madhava Nidana']];
@@ -21,4 +27,4 @@ try {
  }
  if(domain){const sitemap='<?xml version="1.0" encoding="utf-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+routes.map(([r])=>`<url><loc>${domain}${r}</loc></url>`).join('')+'</urlset>';await fs.writeFile(path.join(dist,'sitemap.xml'),sitemap)}
  console.log(`Prerendered ${routes.length} public routes`);
-} finally {await server.close()}
+} finally {await fs.rm(entry,{force:true})}

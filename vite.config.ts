@@ -1,4 +1,4 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-export default defineConfig({plugins:[react(),tailwindcss()], ssr:{noExternal:['react-router-dom','react-router']}, server:{proxy:{'/api': 'http://127.0.0.1:8000'}}, build:{outDir:'dist',manifest:true}, appType:'spa'});
+export default defineConfig({plugins:[react(),tailwindcss()], server:{proxy:{'/api': 'http://127.0.0.1:8000'}}, build:{outDir:'dist',manifest:true}, appType:'spa'});
