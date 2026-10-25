@@ -10,6 +10,7 @@ await build({
   entryPoints:[path.join(root,'src/entry-server.tsx')],
   outfile:entry,platform:'node',format:'cjs',target:'node22',
   bundle:true,external:['react','react-dom','react-dom/server'],
+  define:{'import.meta.env.BASE_URL':JSON.stringify(process.env.VITE_BASE_PATH||'/')},
 });
 try {
  const {render}=require(entry);
