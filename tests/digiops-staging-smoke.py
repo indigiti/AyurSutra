@@ -21,3 +21,24 @@ with tempfile.TemporaryDirectory() as folder:
  assert manifest["files"]["public/.htaccess"]["sha256"]
  assert subprocess.run(["python3",str(script),"--dist",str(dist),"--out",str(out)],capture_output=True).returncode!=0
  print("PASS: DigiOps release public/private structure, isolated seeds, indexed Sanskrit, preserved runtime state")
+
+# Verify a real unmodified runtime collection survives initialization and subsequent release.
+php=pathlib.Path("/usr/bin/php")
+if php.exists():
+ with tempfile.TemporaryDirectory() as d:
+  seed=pathlib.Path(d)/"seeds";seed.mkdir()
+  runtime=pathlib.Path(d)/"runtime/storage";runtime.parent.mkdir()
+  for key in ("articles","books","chapters","exams","notes","sections","verses"):
+   (seed/(key+".json")).write_text("[]")
+  runtime.mkdir()
+  (runtime/"notes.json").write_text('[{"id":"do-not-overwrite","title":"Published work"}]')
+  snippet=f"""<?php
+ require {json.dumps(str(root/"server/src/SeedStorage.php"))};
+ \\AyurSutra\\SeedStorage::ensure({json.dumps(str(seed))},{json.dumps(str(runtime))});
+ \\AyurSutra\\SeedStorage::ensure({json.dumps(str(seed))},{json.dumps(str(runtime))});
+ echo file_get_contents({json.dumps(str(runtime/"notes.json"))});
+ """
+  source=pathlib.Path(d)/"seed-check.php";source.write_text(snippet)
+  test=subprocess.run([str(php),str(source)],capture_output=True,text=True)
+  assert test.returncode==0,test.stderr
+  assert "do-not-overwrite" in test.stdout

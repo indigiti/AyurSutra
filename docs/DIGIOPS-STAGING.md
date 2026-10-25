@@ -29,3 +29,9 @@ The PHP entrypoint resolves \`private_html/ayursutra\` relative to the DigiOps p
 7. Review DigiOps **Health**, **Files**, and **Releases** for the exact commit, server-side health, immutable source files, and rollback availability.
 
 A successful GitHub Actions workflow means a **deployment candidate** is available. It is not proof of an actual Cloudways deployment. Do not click production release or merge feature changes into main solely to make staging discoverable.
+
+## Approved main release
+
+The release CI also builds the same `/ayursutra/` application base and publishes the **exact** `digiops-release` artifact from GitHub Actions on `main` after merging this code. For normal DigiOps use, leave the **Release source branch** field blank (main is already configured), click **Check update** and verify the newest **successful main** run and artifact. Main must be merged and its workflow green before deploying. The staging branch override remains available for isolated preview only. Do not confuse the `ayursutra-cloudways-staging` ZIP with the native DigiOps `digiops-release` folder-structured artifact.
+
+The `main` release contains source-code changes but not production student accounts, licensed exam data, or completed scholarly proofreading. Deploy to the registered staging Cloudways application and validate it before any production acceptance.

@@ -30,11 +30,11 @@ try {
  for(const [route,title,description] of routes){
    const page=render(route);
    const safe=(value)=>String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-   const meta=`<title>${safe(title)} — AyurSutra</title><meta name="description" content="${safe(description)}"/>${domain?`<link rel="canonical" href="${domain+route}"/>`:''}<meta property="og:title" content="${safe(title)} — AyurSutra"/><meta property="og:description" content="${safe(description)}"/><meta property="og:type" content="website"/>`;
+   const meta=`<title>${safe(title)} — AyurSutra</title><meta name="description" content="${safe(description)}"/>${domain?`<link rel="canonical" href="${domain+publicPrefix+route}"/>`:''}<meta property="og:title" content="${safe(title)} — AyurSutra"/><meta property="og:description" content="${safe(description)}"/><meta property="og:type" content="website"/>`;
    let html=template.replace(/<title>[^<]*<\/title>/,'').replace(/<meta name="description"[^>]*>/,'').replace('</head>',`${meta}</head>`).replace('<div id="root"></div>',`<div id="root">${page}</div>`);
    const target=route==='/'?path.join(dist,'index.html'):path.join(dist,route.slice(1),'index.html');
    await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,html);
  }
- if(domain){const sitemap='<?xml version="1.0" encoding="utf-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+routes.map(([r])=>`<url><loc>${domain}${r}</loc></url>`).join('')+'</urlset>';await fs.writeFile(path.join(dist,'sitemap.xml'),sitemap)}
+ if(domain){const sitemap='<?xml version="1.0" encoding="utf-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+routes.map(([r])=>`<url><loc>${domain}${publicPrefix}${r}</loc></url>`).join('')+'</urlset>';await fs.writeFile(path.join(dist,'sitemap.xml'),sitemap)}
  console.log(`Prerendered ${routes.length} public routes`);
 } finally {await fs.rm(entry,{force:true})}
