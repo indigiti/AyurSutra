@@ -189,10 +189,28 @@ final class Api {
             if ($method==='POST' && $path==='/admin/chapters/publish') {
                 $payload=self::body();$id=$payload['id']??null;
                 if(!is_string($id)||!preg_match('~^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$~D',$id))self::respond(422,['error'=>'Invalid chapter ID']);
+                // An editor must attest to specific source and rights checks before publication.
+                // This is recorded provenance, not a claim of independent scholarly peer review.
+                $review=$payload['review']??null;
+                if(!is_array($review)||array_is_list($review))self::respond(422,['error'=>'An editorial review record is required']);
+                $reviewer=trim((string)($review['reviewer']??''));
+                $edition=trim((string)($review['edition']??''));
+                $notes=trim((string)($review['notes']??''));
+                if(strlen($reviewer)<3||strlen($reviewer)>120||strlen($edition)<3||strlen($edition)>240||strlen($notes)>2000
+                   ||($review['text_checked']??false)!==true||($review['rights_confirmed']??false)!==true)
+                    self::respond(422,['error'=>'Reviewer, source edition, text check and reuse-rights confirmation are mandatory']);
                 $found=false;
-                $this->store->mutate('chapters',static function($items)use($id,&$found){
+                $this->store->mutate('chapters',static function($items)use($id,&$found,$reviewer,$edition,$notes){
                     foreach($items as &$item) if(($item['id']??'')===$id && !empty($item['passages'])) {
-                        $found=true;$item['status']='published';$item['published_at']=gmdate('c');break;
+                        $found=true;
+                        // Keep an immutable snapshot of who attested to which imported text.
+                        $item['editorial_review']=[
+                            'reviewer'=>$reviewer,'edition'=>$edition,'notes'=>$notes,
+                            'text_checked'=>true,'rights_confirmed'=>true,
+                            'source_url'=>$item['source_url']??'','source_hash'=>$item['source_hash']??'',
+                            'reviewed_at'=>gmdate('c')
+                        ];
+                        $item['status']='published';$item['published_at']=gmdate('c');break;
                     }
                     unset($item);return $items;
                 });
