@@ -26,6 +26,7 @@ jobs:
           python tests/search-api-smoke.py
           python tests/corpus-api-smoke.py
           python tests/corpus-integrity.py
+          python tests/madhava-promotion-smoke.py
           python tests/madhava-staging-smoke.py
           python tests/admin-auth-limit-smoke.py
           python tests/admin-roles-smoke.py
