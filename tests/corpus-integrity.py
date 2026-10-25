@@ -33,6 +33,6 @@ for book in manifest['books']:
             if 'number' in chapter: assert chapter['number']==by_slug[chapter['slug']]['number'],chapter
             assert chapter['passage_count']>=0,chapter
             imported[bid]=imported.get(bid,0)+1
-assert imported in ({'charaka-samhita':120,'sushruta-samhita':186,'ashtanga-hridaya':120,'ashtanga-sangraha':150,'madhava-nidana':1},{'charaka-samhita':120,'sushruta-samhita':186,'ashtanga-hridaya':120,'ashtanga-sangraha':150,'madhava-nidana':68}),imported
+assert imported=={'charaka-samhita':120,'sushruta-samhita':186,'ashtanga-hridaya':120,'ashtanga-sangraha':150,'madhava-nidana':68},imported
 print('PASS: 646 catalogue entries; source coverage',imported)
 print('Madhava source coverage:',imported['madhava-nidana'],'of 68 diagnostic chapters. No claim of verified translations or scholarly review.')
