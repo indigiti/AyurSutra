@@ -6,7 +6,7 @@
 - SEO: prerendered HTML for the nine public routes; dynamic interactions hydrate client-side. Set `SITE_URL` during build to generate sitemap and canonical links.
 - Offline/PWA: manifest, icon, service worker with cached previously visited public routes. API, admin and private paths are never cached.
 - API: independent PHP 8.2+ modules; no Slim dependency required. JSON /api/v1/ endpoints.
-- Persistence today: PHP FileStore. Every mutation uses exclusive `flock` and an atomic file rename.
+- Persistence today: PHP FileStore. Every collection mutation uses exclusive `flock` and an atomic file rename. Private admin identity tokens support named reviewer/editor/publisher/admin roles, and successful administrative mutations append to a minimal private operational audit file. Neither mechanism replaces independently audited production identity/session management.
 - Editorial security: private backend directory, HTTPS bearer admin token set server-side, no payment handling, no public editorial writes.
 - Optional later: Redis cache/queues, R2 storage, FastAPI for image/computer vision tasks, Capacitor and Tauri.
 
@@ -27,7 +27,7 @@ The application depends on `StoreInterface` (`read` and atomic `mutate`), curren
 | POST | /api/v1/admin/articles | Write draft |
 | POST | /api/v1/admin/articles/:id/publish | Publish reviewed draft |
 
-No full-text cross-corpus search, account sync, subscription billing, AI, Redis or R2 service has been wired yet. The UI uses a small explicitly attributed starter dataset. The importer writes unpublished staging material to enable a later editorial import screen.
+Source-text search now supports an optional private sharded index with IAST-normalized and Devanagari text lookups, alongside published chapters, exams and notes. It is not an external scalable search service. Account synchronization, billing, production AI, Redis and R2 are not configured. The UI uses a small explicitly attributed starter dataset. The importer writes unpublished staging material to enable a later editorial import screen.
 
 ## Source integrity
 
