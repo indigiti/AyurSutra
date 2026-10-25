@@ -1,3 +1,4 @@
+import {apiBase} from './site-paths';
 import {FormEvent,useEffect,useState} from 'react';
 import {Link,useSearchParams} from 'react-router-dom';
 import {ArrowRight,BookOpen,FileQuestion,FileText,Search,ShieldCheck} from 'lucide-react';
@@ -16,7 +17,7 @@ export default function SearchPage(){
  useEffect(()=>{
   if(current.trim().length<2){setData(null);setState('initial');return;}
   const controller=new AbortController();setState('loading');setData(null);
-  fetch(`/api/v1/search?q=${encodeURIComponent(current.trim())}&type=${encodeURIComponent(type)}&limit=40`,{signal:controller.signal})
+  fetch(`${apiBase}search?q=${encodeURIComponent(current.trim())}&type=${encodeURIComponent(type)}&limit=40`,{signal:controller.signal})
    .then(r=>{if(!r.ok)throw Error('Search API is unavailable');return r.json()})
    .then((response:Payload)=>{if(!controller.signal.aborted){setData(response);setState('ready')}})
    .catch(()=>{if(!controller.signal.aborted)setState('error')});

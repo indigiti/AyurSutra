@@ -6,11 +6,17 @@ use Throwable;
 
 final class Api {
     private readonly CorpusStore $corpus;
+    private readonly string $storagePath;
     private ?array $adminIdentity=null;
     private static ?array $auditContext=null;
-    public function __construct(private readonly StoreInterface $store, private readonly string $adminToken) {
-        $storage=getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage';
-        $this->corpus=new CorpusStore(getenv('AYURSUTRA_CORPUS_PATH') ?: rtrim($storage,'/').'/corpus');
+    public function __construct(
+        private readonly StoreInterface $store,
+        private readonly string $adminToken,
+        ?string $storageOverride=null,
+        ?string $corpusOverride=null
+    ) {
+        $this->storagePath=$storageOverride ?: (getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage');
+        $this->corpus=new CorpusStore($corpusOverride ?: (getenv('AYURSUTRA_CORPUS_PATH') ?: rtrim($this->storagePath,'/').'/corpus'));
     }
     private static function respond(int $status, array $body): never {
         if($status>=200&&$status<300&&self::$auditContext!==null){
@@ -38,7 +44,7 @@ final class Api {
         $provided=str_starts_with($authorization,'Bearer ')?substr($authorization,7):'';
         // Client address is obtained from the trusted web server, not an untrusted forwarded header.
         $remote=(string)($_SERVER['REMOTE_ADDR']??'unknown');
-        $storage=getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage';
+        $storage=$this->storagePath;
         $identity=AdminIdentity::resolve($provided,$this->adminToken);
         $status=(new AdminAuthLimiter($storage.'/private/auth-limits'))->evaluate($remote,$identity!==null);
         if($status===429)self::respond(429,['error'=>'Too many failed authentication attempts. Try again later.']);
@@ -59,6 +65,8 @@ final class Api {
     private function dispatch(): never {
         $path=parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
         $path='/'.trim((string)$path,'/');
+        $base=rtrim((string)($_SERVER['AYURSUTRA_BASE_PATH']??getenv('AYURSUTRA_BASE_PATH')?:''),'/');
+        if($base!=='' && $base!=='/' && str_starts_with($path,$base.'/'))$path=substr($path,strlen($base));
         if (str_starts_with($path,'/api/v1/')) $path=substr($path,7);
         $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');
         if ($method==='OPTIONS') self::respond(405,['error'=>'CORS preflight not supported; use same origin']);
@@ -151,14 +159,14 @@ final class Api {
             $this->authorize();
             $this->requireRole($method==='GET'?'viewer':(str_ends_with($path,'/publish')?'publisher':'editor'));
             if ($method!=='GET')self::$auditContext=[
-                'storage'=>getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage',
+                'storage'=>$this->storagePath,
                 'identity'=>$this->adminIdentity,'method'=>$method,'path'=>$path
             ];
             if ($method==='GET' && $path==='/admin/status') self::respond(200,[
                 'ok'=>true,'storage'=>'JSON file collections','role'=>$this->adminIdentity['role'],'account'=>$this->adminIdentity['id']]);
             if ($method==='GET' && $path==='/admin/audit') {
                 $this->requireRole('admin');
-                $storage=getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage';
+                $storage=$this->storagePath;
                 self::respond(200,['data'=>(new AuditTrail($storage))->latest(50)]);
             }
             if ($method==='GET' && $path==='/admin/import-status') {

@@ -1,7 +1,7 @@
 name: AyurSutra checks
 on:
   push:
-    branches: [main, hardening/m1-m5-release-foundation]
+    branches: [main, hardening/m1-m5-release-foundation, staging/ayursutra]
   pull_request:
     branches: [main]
 jobs:
@@ -31,6 +31,7 @@ jobs:
           python tests/admin-auth-limit-smoke.py
           python tests/admin-roles-smoke.py
           python tests/storage-snapshot-smoke.py
+          python tests/digiops-staging-smoke.py
           python tests/search-index-smoke.py
           python scripts/build-search-index.py --corpus server/storage/corpus --output "$RUNNER_TEMP/ayursutra-search-index"
   react-build:
@@ -43,6 +44,8 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
       - name: Build prerendered React application
+        env:
+          VITE_BASE_PATH: /ayursutra/
         run: npm run build
       - name: Package segregated Cloudways staging release
         run: python3 scripts/package-cloudways.py --output "$RUNNER_TEMP/ayursutra-cloudways-staging.zip"
@@ -51,6 +54,18 @@ jobs:
         with:
           name: ayursutra-cloudways-staging
           path: ${{ runner.temp }}/ayursutra-cloudways-staging.zip
+          if-no-files-found: error
+          retention-days: 14
+      - name: Assemble DigiOps-compatible release
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging/ayursutra')
+        run: python3 scripts/package-digiops-staging.py --dist dist --out release
+      - name: Publish exact DigiOps release artifact
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging/ayursutra')
+        uses: actions/upload-artifact@v4
+        with:
+          name: digiops-release
+          path: release/
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
   browser-smoke:
