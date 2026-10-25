@@ -34,5 +34,14 @@ for book in manifest['books']:
             assert chapter['passage_count']>=0,chapter
             imported[bid]=imported.get(bid,0)+1
 assert imported=={'charaka-samhita':120,'sushruta-samhita':186,'ashtanga-hridaya':120,'ashtanga-sangraha':150,'madhava-nidana':68},imported
-print('PASS: 646 catalogue entries; source coverage',imported)
+readable=sum(int(ch['passage_count']>0) for book in manifest['books'] for section in book['sections'] for ch in section['chapters'])
+assert readable==643,readable
+zero=[(book['id'],section['slug'],ch['slug']) for book in manifest['books'] for section in book['sections'] for ch in section['chapters'] if int(ch['passage_count'])==0]
+assert zero==[('sushruta-samhita','sharirasthanam','chapter-10')],zero
+for source_path in ('server/storage/sections.json','src/content/sections.json','public/content/sections.json'):
+    for sec in read(source_path):
+        for ch in sec['chapters']:
+            entry=next((s for b in manifest['books'] if b['id']==sec['book_id'] for section in b['sections'] if section['slug']==sec['slug'] for s in section['chapters'] if s['slug']==ch['slug']),None)
+            if entry and entry['passage_count']>0: assert ch['status']=='source-edition'
+print('PASS: 646 catalogue entries, 644 source-mapped chapters, 643 with source passages',imported)
 print('Madhava source coverage:',imported['madhava-nidana'],'of 68 diagnostic chapters. No claim of verified translations or scholarly review.')
