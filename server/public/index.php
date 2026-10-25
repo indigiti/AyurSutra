@@ -4,6 +4,7 @@ require_once __DIR__.'/../src/StoreInterface.php';
 require_once __DIR__.'/../src/FileStore.php';
 require_once __DIR__.'/../src/CorpusStore.php';
 require_once __DIR__.'/../src/SearchService.php';
+require_once __DIR__.'/../src/AdminAuthLimiter.php';
 require_once __DIR__.'/../src/Api.php';
 use AyurSutra\Api;
 use AyurSutra\Support\FileStore;

@@ -28,7 +28,13 @@ final class Api {
     private function authorize(): void {
         $authorization=$_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
         $provided=str_starts_with($authorization,'Bearer ')?substr($authorization,7):'';
-        if (strlen($this->adminToken)<32 || !hash_equals($this->adminToken,$provided)) self::respond(401,['error'=>'Unauthorized']);
+        // Client address is obtained from the trusted web server, not an untrusted forwarded header.
+        $remote=(string)($_SERVER['REMOTE_ADDR']??'unknown');
+        $valid=strlen($this->adminToken)>=32 && hash_equals($this->adminToken,$provided);
+        $storage=getenv('AYURSUTRA_STORAGE_PATH') ?: dirname(__DIR__).'/storage';
+        $status=(new AdminAuthLimiter($storage.'/private/auth-limits'))->evaluate($remote,$valid);
+        if($status===429)self::respond(429,['error'=>'Too many failed authentication attempts. Try again later.']);
+        if($status!==200)self::respond(401,['error'=>'Unauthorized']);
     }
     public function run(): never {
         try {$this->dispatch();} catch (Throwable $e) {
