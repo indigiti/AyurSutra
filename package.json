@@ -32,7 +32,7 @@
     "vite": "^6.0.0",
     "@capacitor/cli": "^7.0.0",
     "@capacitor/android": "^7.0.0",
-    "@capacitor/ios": "^7.0.0",
+    "@capacitor/ios": "^8.5.3",
     "esbuild": "^0.24.0",
     "@playwright/test": "^1.56.0"
   }
