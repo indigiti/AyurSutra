@@ -27,7 +27,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: madhava-unreviewed-chapters
-          path: {{ runner.temp }}/madhava/
+          path: ${{ runner.temp }}/madhava/
           retention-days: 7
           if-no-files-found: error
       - name: Explain why no source artifact was generated
