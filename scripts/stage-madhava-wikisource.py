@@ -35,7 +35,8 @@ def stage(text,revision,output):
     for idx,(title,raw) in enumerate(titles[:68],start=1):
         if not title or len(title)>240:raise ValueError('Invalid chapter title')
         # Raw line groups preserve source ordering; they are NOT verified śloka or paragraph boundaries.
-        lines=[line.strip() for line in raw.splitlines() if line.strip() and not line.strip().startswith(('{{','}}','<!--','[[Category:'))]
+        lines=[re.sub(r'^:+', '', line.strip()).strip() for line in raw.splitlines()
+               if line.strip() and not line.strip().startswith(('{{','}}','<!--','[[Category:'))]
         if len(lines)<3:raise ValueError(f'Chapter {idx} has insufficient source text')
         if any(re.search(r'<script|<iframe',line,re.I) for line in lines):raise ValueError('Unsafe markup')
         passages=[{'reference':f'source-line-{n:04d}','text_devanagari':line,
