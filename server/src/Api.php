@@ -199,17 +199,23 @@ final class Api {
                 foreach($passages as $index=>$p){
                     if(!is_array($p))self::respond(422,['error'=>'Invalid passage']);
                     $ref=$p['reference']??'';$dev=$p['text_devanagari']??'';$iast=$p['text_iast']??'';
-                    if(!is_string($ref)||trim($ref)===''||strlen($ref)>100||!is_string($dev)||!is_string($iast)||trim($dev.$iast)===''||strlen($dev)>40000||strlen($iast)>40000)self::respond(422,['error'=>'Missing or invalid source text at passage '.($index+1)]);
+                    $sanskrit=$p['commentary_sanskrit']??'';$meaning=$p['commentary_en']??'';$adhikarana=$p['adhikarana']??'';
+                    if(!is_string($sanskrit)||strlen($sanskrit)>120000||!is_string($meaning)||strlen($meaning)>15000||!is_string($adhikarana)||strlen($adhikarana)>240)self::respond(422,['error'=>'Invalid commentary or Adhikarana']);
+                    if(!is_string($ref)||trim($ref)===''||strlen($ref)>100||!is_string($dev)||!is_string($iast)||trim($dev.$iast.$sanskrit)===''||strlen($dev)>40000||strlen($iast)>40000)self::respond(422,['error'=>'Missing or invalid source text at passage '.($index+1)]);
                     $translation=$p['translation_en']??'';$commentary=$p['commentary']??'';$terms=$p['key_terms']??[];
                     if(!is_string($translation)||strlen($translation)>15000||!is_string($commentary)||strlen($commentary)>120000||!is_array($terms)||!array_is_list($terms)||count($terms)>50)self::respond(422,['error'=>'Invalid commentary or terminology']);
                     $cleanTerms=[];
-                    foreach($terms as $term){if(!is_array($term)||!is_string($term['term']??null)||!is_string($term['definition']??null)||strlen($term['term'])>200||strlen($term['definition'])>2000)self::respond(422,['error'=>'Invalid key term']);$cleanTerms[]=['term'=>$term['term'],'definition'=>$term['definition']];}
-                    $normalized[]=['id'=>substr(hash('sha256',$book.'/'.$sectionSlug.'/'.$chapterSlug.'/'.$index.'/'.$ref),0,20),'reference'=>trim($ref),'text_devanagari'=>trim($dev),'text_iast'=>trim($iast),'translation_en'=>trim($translation),'commentary'=>trim($commentary),'key_terms'=>$cleanTerms];
+                    foreach($terms as $term){if(!is_array($term)||!is_string($term['term']??null)||!is_string($term['definition']??null)||strlen($term['term'])>200||strlen($term['definition'])>2000)self::respond(422,['error'=>'Invalid key term']);$termIast=$term['iast']??'';if(!is_string($termIast)||strlen($termIast)>200)self::respond(422,['error'=>'Invalid key term IAST']);$cleanTerms[]=['term'=>$term['term'],'definition'=>$term['definition'],'iast'=>trim($termIast)];}
+                    $normalized[]=['id'=>substr(hash('sha256',$book.'/'.$sectionSlug.'/'.$chapterSlug.'/'.$index.'/'.$ref),0,20),'reference'=>trim($ref),'text_devanagari'=>trim($dev),'text_iast'=>trim($iast),'translation_en'=>trim($translation),'commentary'=>trim($commentary),'commentary_sanskrit'=>trim($sanskrit),'commentary_en'=>trim($meaning),'adhikarana'=>trim($adhikarana),'key_terms'=>$cleanTerms];
                 }
                 $id=$book.'/'.$sectionSlug.'/'.$chapterSlug;
                 $title=$b['title']??($chapterIndex['title']??null);
                 if(!is_string($title)||!trim($title)||strlen($title)>240)$title='Chapter '.($chapterIndex['number']??'');
                 $record=['id'=>$id,'book_id'=>$book,'section_slug'=>$sectionSlug,'chapter_slug'=>$chapterSlug,'chapter_number'=>$chapterIndex['number'],'title'=>$title,'source_url'=>$source,'passages'=>$normalized,'source_hash'=>hash('sha256',json_encode($normalized,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)),'status'=>'draft'];
+                foreach(['title_iast','title_devanagari'] as $field)if(isset($b[$field])){
+                    if(!is_string($b[$field])||strlen($b[$field])>240)self::respond(422,['error'=>'Invalid chapter script title']);
+                    $record[$field]=trim($b[$field]);
+                }
                 $preserved=false;
                 $this->store->mutate('chapters',static function($items)use($record,&$preserved){
                     foreach($items as $i=>$entry)if(($entry['id']??'')===$record['id']){

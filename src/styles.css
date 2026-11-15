@@ -122,3 +122,24 @@ body:has(.source-reader) .footer{background:#141813;color:#e7e8d8}
  .source-reader-prevnext{font-size:11px;gap:8px}
  .source-index-link{display:none!important}
 }
+
+/* Shared Classical Texts catalogue and compact source reader. */
+.classical-catalogue .source-reader-inner{max-width:1060px}
+.classical-catalogue h1{font-family:Georgia,serif;font-size:clamp(2rem,5vw,2.8rem);margin:12px 0;color:#f2efe8}
+.classical-kicker,.classical-card a{color:var(--reader-green);font-weight:650}
+.classical-intro{max-width:760px;color:#bdb9a9;line-height:1.65;font-size:1.05rem}
+.classical-search{margin:30px 0 36px}
+.classical-search input{max-width:none;flex:1;min-width:0}
+.classical-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.classical-card{display:flex;flex-direction:column;align-items:flex-start;border:1px solid var(--reader-line);border-radius:22px;background:var(--reader-panel);padding:24px}
+.classical-card h2{font-family:Georgia,serif;color:#f2efe8;font-size:1.45rem;margin:0 0 10px}
+.classical-card p{color:#bdb9a9;line-height:1.65;margin:0 0 22px}
+.classical-card a{margin-top:auto;padding-block:4px}
+.classical-card a:hover{text-decoration:underline}
+.source-reader:not(.classical-catalogue) .source-reader-inner{max-width:1240px}
+.source-reader-heading h1{font-size:clamp(1.9rem,5vw,3.3rem);line-height:1.3}
+.source-view-original{margin:0 0 14px}
+.source-view-original summary,.source-reader-disclaimer summary{color:var(--reader-green);cursor:pointer}
+.source-view-original p,.source-shloka-commentary p,.source-shloka-text{white-space:pre-wrap;overflow-wrap:anywhere}
+.source-term-iast{color:#bdb9a9}
+@media(max-width:640px){.classical-grid{grid-template-columns:minmax(0,1fr)}.classical-card{padding:18px}.classical-search{gap:8px}}
