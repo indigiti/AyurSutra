@@ -1,0 +1,74 @@
+{
+  "base_source_url": "https://github.com/sarit/SARIT-corpus/blob/master/susrutasamhita.xml",
+  "study_note": {
+    "source_url": "https://www.vedasforvaidyas.com/e-samhita/sushruta-samhita/sutrasthanam/1-vedotpattyadhyayah",
+    "label": "Opening study notes only: a short excerpt from Ḍalhaṇa’s invocation, original English study explanations, and selected glossary terms. The rest of the chapter remains source-only."
+  },
+  "invocation": {
+    "id": "dalhana-mangalacarana-excerpt",
+    "reference": "Opening invocation excerpt",
+    "adhikarana": "Maṅgalācaraṇa",
+    "text_devanagari": "",
+    "text_iast": "",
+    "translation_en": "",
+    "commentary": "",
+    "commentary_sanskrit": "सहस्राक्षं गणाधीशं स्वगुरुं च सरस्वतीम् ।\nजनकं जनयित्रीं च शास्त्रादौ प्रणमाम्यहम् ॥",
+    "commentary_en": "At the outset of his work, the commentator offers homage to the thousand-eyed one, the lord of the hosts, his own teacher, Sarasvatī, and both his parents.",
+    "key_terms": [
+      {
+        "term": "स्वगुरुम्",
+        "iast": "svagurum",
+        "definition": "One’s own teacher."
+      },
+      {
+        "term": "शास्त्रादौ",
+        "iast": "śāstrādau",
+        "definition": "At the beginning of the treatise."
+      },
+      {
+        "term": "प्रणमामि",
+        "iast": "praṇamāmi",
+        "definition": "I bow in homage."
+      }
+    ]
+  },
+  "passages": {
+    "Su.1.1.1": {
+      "iast_key": "athātovedotpattimadhyāyaṃvyākhyāsyāmaḥ",
+      "translation_en": "We shall now explain the chapter on the origin of the Veda.",
+      "key_terms": [
+        {
+          "term": "वेदोत्पत्तिः",
+          "iast": "vedotpattiḥ",
+          "definition": "The arising or origin of the Veda; the opening names the subject of this chapter."
+        },
+        {
+          "term": "अध्यायः",
+          "iast": "adhyāyaḥ",
+          "definition": "A chapter or lesson in a treatise."
+        },
+        {
+          "term": "व्याख्यास्यामः",
+          "iast": "vyākhyāsyāmaḥ",
+          "definition": "‘We shall explain,’ the opening declaration of what follows."
+        }
+      ]
+    },
+    "Su.1.1.2": {
+      "iast_key": "yathovācabhagavāndhanvantariḥ",
+      "translation_en": "As the venerable Dhanvantari taught it.",
+      "key_terms": [
+        {
+          "term": "धन्वन्तरिः",
+          "iast": "dhanvantariḥ",
+          "definition": "The teacher to whom the opening attributes the exposition."
+        },
+        {
+          "term": "उवाच",
+          "iast": "uvāca",
+          "definition": "‘Said’ or ‘spoke’; part of the compound form yathovāca, ‘as [he] spoke.’"
+        }
+      ]
+    }
+  }
+}

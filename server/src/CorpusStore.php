@@ -24,8 +24,33 @@ final class CorpusStore {
     }
     public function chapter(string $book,string $section,string $slug): ?array {
         if (!$this->valid($slug))return null;
-        foreach ($this->chapters($book,$section) as $c)if(($c['chapter_slug']??null)===$slug)return $c;
+        foreach ($this->chapters($book,$section) as $c)if(($c['chapter_slug']??null)===$slug){
+            if ($book==='sushruta-samhita' && $section==='sutrasthanam' && $slug==='vedotpattyadhyayah') {
+                return $this->withVedotpattiStudyNotes($c);
+            }
+            return $c;
+        }
         return null;
+    }
+    private function withVedotpattiStudyNotes(array $chapter): array {
+        // Never replace or renumber the base Sanskrit passages or their bookmark IDs.
+        $study=$this->readFile($this->directory.'/study/vedotpattyadhyayah.json');
+        if (!$study || ($chapter['source_url']??null)!==($study['base_source_url']??null)) return $chapter;
+        $passages=$chapter['passages']??[];
+        $notes=$study['passages']??[];
+        foreach ($notes as $reference=>$annotation) {
+            $matches=array_keys(array_filter($passages,static fn($p)=>($p['reference']??'')===$reference));
+            if(count($matches)!==1)return $chapter;
+            $index=$matches[0];
+            $normalized=preg_replace('/[^\\p{L}\\p{M}]/u','',strtolower($passages[$index]['text_iast']??''));
+            if ($normalized!==$annotation['iast_key'])return $chapter;
+            unset($annotation['iast_key']);
+            $passages[$index]=array_replace($passages[$index],$annotation);
+        }
+        array_unshift($passages,$study['invocation']);
+        $chapter['passages']=$passages;
+        $chapter['study_note']=$study['study_note'];
+        return $chapter;
     }
     public function chapterIndex(string $book): array {
         $items=[];
