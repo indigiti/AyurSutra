@@ -95,3 +95,16 @@ test('global commentary and individual cards are independent, and terms stay vis
  await page.getByRole('button',{name:'Hide commentary',exact:true}).click();
  await expect(page.getByText('Fixture commentary b',{exact:true})).toHaveCount(0);
 });
+
+test('Vedotpatti opening study notes are served by the real chapter API',async({page})=>{
+ await page.goto('/library/sushruta-samhita/sutrasthanam/vedotpattyadhyayah');
+ await expect(page.getByText('Opening study notes only:',{exact:false})).toBeVisible();
+ const invocation=page.locator('#dalhana-mangalacarana-excerpt');
+ await expect(invocation.getByText('One’s own teacher.')).toBeVisible();
+ await page.getByRole('button',{name:'Show commentary',exact:true}).click();
+ await expect(invocation.getByText('MEANING OF THE COMMENTARY',{exact:true})).toBeVisible();
+ await expect(invocation.getByText('सहस्राक्षं',{exact:false})).toBeVisible();
+ await expect(page.getByText('We shall now explain the chapter on the origin of the Veda.',{exact:true})).toBeVisible();
+ await expect(page.getByText('As the venerable Dhanvantari taught it.',{exact:true})).toBeVisible();
+ await expect(page.getByText('PASSAGE · Su.1.1.3',{exact:true})).toBeVisible();
+});
