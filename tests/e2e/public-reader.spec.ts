@@ -46,17 +46,7 @@ test('source-inspired chapter reader allows search, transliteration and passage 
   ['Bengali','bengali',/[\u0980-\u09ff]/u],['Gurmukhi','gurmukhi',/[\u0a00-\u0a7f]/u],
  ] as const){
   await page.getByRole('button',{name,exact:true}).click();
-  await expect(page).toHaveURL(new RegExp('script='+id+'
- await page.getByRole('search').getByRole('textbox',{name:/Search passage text/i}).fill('this phrase is not in the source');
- await page.getByRole('search').getByRole('button',{name:'Search'}).click();
- await expect(page.getByRole('heading',{name:'No matching passages'})).toBeVisible();
- await page.getByRole('button',{name:'Show all passages'}).click();
- await expect(page.locator('.source-shloka-card').first()).toBeVisible();
- await page.getByRole('button',{name:'Save passage'}).first().click();
- await page.goto('/my-library');
- await expect(page.getByRole('link',{name:'Open passage'}).last()).toBeVisible();
-});
-));
+  await expect(page).toHaveURL(url=>url.searchParams.get('script')===id);
   await expect(page.locator('.source-shloka-text').first()).toHaveText(characters);
  }
  await page.reload();
