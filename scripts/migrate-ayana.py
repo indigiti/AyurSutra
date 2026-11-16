@@ -71,7 +71,10 @@ def normalize(source, sections, exams):
                 if not isinstance(p,dict):raise ValueError('passage must be an object')
                 ref=text(p.get('reference'),100)
                 deva=p.get('text_devanagari','');iast=p.get('text_iast','')
-                if not deva and not iast:raise ValueError('passage needs Sanskrit original or IAST text')
+                sanskrit=text(p['commentary_sanskrit'],120000) if p.get('commentary_sanskrit') else ''
+                meaning=text(p['commentary_en'],15000) if p.get('commentary_en') else ''
+                adhikarana=text(p['adhikarana'],240) if p.get('adhikarana') else ''
+                if not deva and not iast and not sanskrit:raise ValueError('passage needs Sanskrit original, IAST text or Sanskrit commentary')
                 if deva:deva=text(deva,40000)
                 if iast:iast=text(iast,40000)
                 commentary=p.get('commentary','')
@@ -83,13 +86,14 @@ def normalize(source, sections, exams):
                 terms_clean=[]
                 for term in terms:
                     if not isinstance(term,dict):raise ValueError('key term must be an object')
-                    terms_clean.append({'term':text(term.get('term'),200),'definition':text(term.get('definition'),2000)})
+                    terms_clean.append({'term':text(term.get('term'),200),'definition':text(term.get('definition'),2000),'iast':text(term['iast'],200) if term.get('iast') else ''})
                 passages.append({'id':hashlib.sha256((book+'/'+sth+'/'+chapter_slug+'/'+str(i)+'/'+ref).encode()).hexdigest()[:20],
                     'reference':ref,'text_devanagari':deva,'text_iast':iast,'translation_en':translation,
-                    'commentary':commentary,'key_terms':terms_clean})
+                    'commentary':commentary,'commentary_sanskrit':sanskrit,'commentary_en':meaning,'adhikarana':adhikarana,'key_terms':terms_clean})
             canonical=book+'/'+sth+'/'+chapter_slug
             chapters.append({'id':canonical,'book_id':book,'section_slug':sth,'chapter_slug':chapter_slug,
                 'title':text(raw.get('title') or entry.get('title') or 'Chapter '+str(entry['number']),240),
+                **{field:text(raw[field],240) for field in ('title_iast','title_devanagari') if raw.get(field)},
                 'chapter_number':entry['number'],'source_url':source_url,'passages':passages,
                 'source_hash':hashlib.sha256(json.dumps(passages,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),
                 'status':'draft'})

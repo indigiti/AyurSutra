@@ -1,7 +1,7 @@
-import {romanToDevanagari} from './reader-transliteration';
+import {readerScripts,renderSanskrit} from './reader-transliteration';
 import {apiBase} from './site-paths';
 import {useEffect,useMemo,useState} from 'react';
-import {Link,useParams} from 'react-router-dom';
+import {Link,useParams,useSearchParams} from 'react-router-dom';
 import {ArrowLeft,ArrowRight,Bookmark,BookmarkCheck,BookOpen,CheckCircle2,ChevronDown,ChevronRight,Clock3,ExternalLink,FileQuestion,GraduationCap,Library,Search,ShieldCheck,Timer,Upload,FileText} from 'lucide-react';
 import {books,dailyQuestions} from './data';
 import sectionsSeed from './content/sections.json';
@@ -18,8 +18,8 @@ const examsInitial=examSeed as PaperMeta[];
 function useData<T>(path:string,seed:T):T{const [value,setValue]=useState(seed);useEffect(()=>{let live=true;fetch(apiBase+''+path).then(r=>{if(!r.ok)throw Error('Unavailable');return r.json()}).then(j=>{if(live&&j.data!==undefined)setValue(j.data)}).catch(()=>{});return()=>{live=false}},[path]);return value}
 function AcademyIntro({eyebrow,title,description}:{eyebrow:string;title:string;description:string}){return <section className="page-hero"><div className="container"><div className="eyebrow"><span className="eyebrow-line"/>{eyebrow}</div><h1>{title}</h1><p>{description}</p></div></section>}
 export function BookSections({bookId}:{bookId:string}){const initial=sectionsInitial.filter(s=>s.book_id===bookId);const sections=useData<Section[]>('sections?book_id='+encodeURIComponent(bookId),initial);const [opened,setOpened]=useState<string|null>(sections[0]?.id||null);const [query,setQuery]=useState('');const rows=useMemo(()=>sections.map(s=>({...s,chapters:s.chapters.filter(c=>!query.trim()||`${c.number} ${c.title||''} ${s.name}`.toLowerCase().includes(query.toLowerCase()))})).filter(s=>s.chapters.length),[sections,query]);return <section className="academy-structure"><div className="section-head academy-structure-head"><div><div className="eyebrow"><span className="eyebrow-line"/> CHAPTER NAVIGATOR</div><h2>Explore the Sthānas.</h2><p>Browse available Sanskrit source editions and chapter indexes. Digital transcriptions are labelled separately from editorial translations.</p></div><span className="count-chip">{sections.reduce((n,s)=>n+s.chapter_count,0)} indexed entries</span></div><label className="academy-search"><Search size={18}/><input placeholder="Find a chapter number, title or Sthāna" value={query} onChange={e=>setQuery(e.target.value)} aria-label="Search chapter index"/></label><div className="academy-sections">{rows.map(s=><article key={s.id} className="academy-section"><button className="academy-section-title" onClick={()=>setOpened(opened===s.id?null:s.id)} aria-expanded={opened===s.id||!!query}><span className="academy-section-ordinal">{String(s.order).padStart(2,'0')}</span><span className="academy-section-name"><strong>{s.name} <span lang="sa">{s.devanagari}</span></strong><small>{s.chapter_count} chapters · reference index</small></span><ChevronDown className={opened===s.id||query?'turn':''} size={21}/></button>{(opened===s.id||!!query)&&<div className="academy-chapters">{s.chapters.map(c=><Link key={c.number} to={`/library/${bookId}/${s.slug}/${c.slug}`} className="academy-chapter"><span>{String(c.number).padStart(2,'0')}</span><div><strong>{c.title||`Chapter ${c.number}`}</strong><small>{c.status==='published'?`${(c as Chapter & {passage_count?:number}).passage_count??0} published passages`:c.status==='source-edition'?`${(c as Chapter & {passage_count?:number}).passage_count??0} Sanskrit source passages · unproofread`:c.entry_kind==='index'?'Appendix: subject index':c.entry_kind==='bibliography'?'Appendix: source references':c.status==='sample'?'Sample passage available':'Awaiting verified text import'}</small></div><ChevronRight size={16}/></Link>)}</div>}</article>)}{rows.length===0&&<p className="empty-inline">No indexed chapters match that search.</p>}</div><p className="academy-notice"><ShieldCheck size={17}/> Original Sanskrit passages from SARIT and Wikisource are attributed but not independently proofread. The two Madhava appendices remain reference-only.</p></section>}
-type PublishedPassage={id:string;reference:string;text_devanagari:string;text_iast:string;translation_en:string;commentary:string;key_terms:{term:string;definition:string}[]};
-type PublishedChapter={id:string;title:string;source_url:string;passages:PublishedPassage[];published_at:string};
+type PublishedPassage={id:string;reference:string;text_devanagari:string;text_iast:string;translation_en:string;commentary:string;commentary_sanskrit?:string;commentary_en?:string;adhikarana?:string;key_terms:{term:string;iast?:string;definition:string}[]};
+type PublishedChapter={id:string;title:string;title_iast?:string;title_devanagari?:string;source_url:string;passages:PublishedPassage[];published_at:string};
 
 export function ChapterPage({bookmarks,onToggle}:{bookmarks:string[];onToggle:(id:string)=>void}){
  const {id,section:sectionSlug,chapter:chapterSlug}=useParams();
@@ -32,15 +32,22 @@ export function ChapterPage({bookmarks,onToggle}:{bookmarks:string[];onToggle:(i
  const next=position>=0&&position+1<(section?.chapters.length||0)?section?.chapters[position+1]:null;
  const chapterKey='chapter:'+id+'/'+sectionSlug+'/'+chapterSlug;
  const [published,setPublished]=useState<PublishedChapter|null>(null);
- const [script,setScript]=useState<'deva'|'iast'>('deva');
+ const [params,setParams]=useSearchParams();
+ const selected=readerScripts.find(item=>item.id===params.get('script'))??readerScripts[0];
+ const script=selected.id;
+ function chooseScript(id:typeof script){
+  const nextParams=new URLSearchParams(params);
+  if(id==='devanagari')nextParams.delete('script');else nextParams.set('script',id);
+  setParams(nextParams,{preventScrollReset:true});
+ }
  const [queryInput,setQueryInput]=useState('');
  const [query,setQuery]=useState('');
  const [showCommentary,setShowCommentary]=useState(false);
- const [expanded,setExpanded]=useState<string[]>([]);
+ const [commentaryOverrides,setCommentaryOverrides]=useState<Record<string,boolean>>({});
  const [copyStatus,setCopyStatus]=useState<string|null>(null);
  useEffect(()=>{
   if(!id||!sectionSlug||!chapterSlug)return;
-  let active=true;setPublished(null);setQuery('');setQueryInput('');setExpanded([]);setCopyStatus(null);setScript('deva');
+  let active=true;setPublished(null);setQuery('');setQueryInput('');setCommentaryOverrides({});setShowCommentary(false);setCopyStatus(null);
   fetch(apiBase+'chapters/'+encodeURIComponent(id)+'/'+encodeURIComponent(sectionSlug)+'/'+encodeURIComponent(chapterSlug))
    .then(r=>r.ok?r.json():null).then(result=>{if(active&&result?.data)setPublished(result.data)}).catch(()=>{});
   return()=>{active=false};
@@ -48,17 +55,20 @@ export function ChapterPage({bookmarks,onToggle}:{bookmarks:string[];onToggle:(i
  const passages=published?.passages||[];
  const hasDeva=passages.some(p=>Boolean(p.text_devanagari?.trim()));
  const hasIast=passages.some(p=>Boolean(p.text_iast?.trim()));
- const canShowDeva=hasDeva||hasIast;
- const hasCommentary=passages.some(p=>Boolean(p.commentary?.trim()));
+ const hasSanskrit=hasDeva||hasIast;
+ const hasCommentary=passages.some(p=>Boolean(p.commentary?.trim()||p.commentary_sanskrit?.trim()||p.commentary_en?.trim()));
  const hasTranslations=passages.some(p=>Boolean(p.translation_en?.trim()));
  const hasTerms=passages.some(p=>(p.key_terms||[]).length>0);
  const filtered=useMemo(()=>{
   if(!query)return passages;
-  const q=query.toLocaleLowerCase();
-  return passages.filter(p=>[p.reference,p.text_iast,p.text_devanagari,p.translation_en,p.commentary,
-   ...(p.key_terms||[]).flatMap(t=>[t.term,t.definition]),
-   p.text_iast?romanToDevanagari(p.text_iast):''].some(x=>(x||'').toLocaleLowerCase().includes(q)));
- },[passages,query]);
+  const normalize=(value:string)=>value.normalize('NFC').toLocaleLowerCase();
+  const q=normalize(query);
+  return passages.filter(p=>[p.reference,p.adhikarana,p.text_iast,p.text_devanagari,p.translation_en,p.commentary,p.commentary_sanskrit,p.commentary_en,
+   ...(p.key_terms||[]).flatMap(t=>[t.term,t.iast,t.definition]),
+   renderSanskrit(p.text_devanagari,p.text_iast,'devanagari'),
+   renderSanskrit(p.text_devanagari,p.text_iast,'iast'),
+   renderSanskrit(p.text_devanagari,p.text_iast,script)].some(x=>normalize(x||'').includes(q)));
+ },[passages,query,script]);
  async function copyPassage(passage:PublishedPassage){
   const text=[passage.text_devanagari||passage.text_iast,passage.reference,published?.source_url].filter(Boolean).join('\n');
   try{await navigator.clipboard.writeText(text);setCopyStatus(passage.id)}
@@ -67,8 +77,12 @@ export function ChapterPage({bookmarks,onToggle}:{bookmarks:string[];onToggle:(i
  if(!book||!section||!chapter)return <section className="container section-short"><h1>Chapter not found</h1><Link to="/library">Browse the library</Link></section>;
  const sourceIsUnproofread=(published as PublishedChapter & {status?:string})?.status==='source-edition';
  const displayTitle=chapter.title||'Chapter '+chapter.number;
- const originalTitle=published?.title||displayTitle;
- const devaHeading=romanToDevanagari(displayTitle);
+ const headingIast=published?.title_iast||(book.id==='sushruta-samhita'&&sectionSlug==='sutrasthanam'&&chapterSlug==='vedotpattyadhyayah'?'Vedotpattyadhyāyaḥ':'');
+ const headingDeva=published?.title_devanagari||(/[\u0900-\u097f]/u.test(displayTitle)?displayTitle:'');
+ const readerHeading=headingDeva||headingIast||chapter.title?renderSanskrit(headingDeva,headingIast||(headingDeva?'':displayTitle),script):displayTitle;
+ const chapterNumber=script==='iast'?String(chapter.number):renderSanskrit(String(chapter.number).replace(/\d/g,n=>String.fromCharCode(0x966+Number(n))),'',script);
+ const scriptQuery=params.get('script')&&script!=='devanagari'?'?script='+script:'';
+ const generated=script==='devanagari'?passages.some(p=>!p.text_devanagari&&p.text_iast):script==='iast'?passages.some(p=>!p.text_iast&&p.text_devanagari):hasSanskrit;
  return <section className="source-reader" aria-label="Classical Sanskrit reader">
   <div className="source-reader-inner">
    <nav className="source-breadcrumbs" aria-label="Breadcrumb">
@@ -76,23 +90,17 @@ export function ChapterPage({bookmarks,onToggle}:{bookmarks:string[];onToggle:(i
     <Link to={'/library/'+book.id}>{book.title}</Link><ChevronRight size={13}/><span>{section.name}</span>
    </nav>
    <header className="source-reader-heading">
-    <p className="source-reader-overline">{book.title} / {section.name} · chapter {chapter.number}</p>
-    <h1 lang={script==='deva'?'sa-Deva':'sa-Latn'}>{script==='deva'&&devaHeading!==displayTitle?chapter.number+'. '+devaHeading:chapter.number+'. '+displayTitle}</h1>
-    <p className="source-reader-subtitle">{originalTitle} · Original Sanskrit source and editorial translations are kept distinct.</p>
+    <h1 lang={selected.lang}>{chapterNumber}. {readerHeading}</h1>
    </header>
    <div className="source-language-tabs" role="group" aria-label="Text script">
-    <button type="button" className={script==='deva'?'active':''} disabled={!canShowDeva}
-     aria-pressed={script==='deva'} onClick={()=>setScript('deva')}>Devanagari{!hasDeva&&hasIast&&<span className="source-auto-symbol"> · auto</span>}</button>
-    <button type="button" className={script==='iast'?'active':''} disabled={!hasIast}
-     aria-pressed={script==='iast'} onClick={()=>setScript('iast')}>IAST (Roman)</button>
-    {['Telugu','Tamil','Malayalam','Kannada','Gujarati','Bengali','Gurmukhi'].map(name=>
-     <button type="button" key={name} disabled title={name+' transliteration is unavailable for this source edition'}>{name}</button>)}
+    {readerScripts.map(item=><button type="button" key={item.id} className={script===item.id?'active':''}
+     aria-pressed={script===item.id} disabled={!hasSanskrit} onClick={()=>chooseScript(item.id)}>{item.label}</button>)}
    </div>
    <div className="source-reader-actions">
     <form className="source-search-form" role="search" onSubmit={e=>{e.preventDefault();setQuery(queryInput.trim())}}>
      <label htmlFor="source-chapter-search" className="visually-hidden">Search passage text, reference or commentary</label>
      <input id="source-chapter-search" value={queryInput} onChange={e=>{setQueryInput(e.target.value);if(!e.target.value.trim())setQuery('')}}
-      placeholder="Search text, reference, or śloka..." />
+      placeholder="Search text, Adhikarana, or Śloka" />
      <button className="source-search-submit" type="submit"><Search size={16}/> Search</button>
      {query&&<button type="button" className="source-search-clear" onClick={()=>{setQuery('');setQueryInput('')}}>Clear</button>}
     </form>
@@ -100,15 +108,15 @@ export function ChapterPage({bookmarks,onToggle}:{bookmarks:string[];onToggle:(i
      <button type="button" onClick={()=>onToggle(chapterKey)} className="source-top-bookmark" aria-pressed={bookmarks.includes(chapterKey)}>
       {bookmarks.includes(chapterKey)?<BookmarkCheck size={16}/>:<Bookmark size={16}/>} {bookmarks.includes(chapterKey)?'Saved chapter':'Save chapter'}
      </button>
-     {hasCommentary&&<button type="button" className="source-commentary-all" onClick={()=>setShowCommentary(x=>!x)}>
+     {hasCommentary&&<button type="button" className="source-commentary-all" aria-pressed={showCommentary} onClick={()=>{setShowCommentary(x=>!x);setCommentaryOverrides({});}}>
       {showCommentary?'Hide commentary':'Show commentary'}
      </button>}
     </div>
    </div>
    <nav className="source-reader-prevnext" aria-label="Chapter navigation">
-    <span>{previous?<Link to={'/library/'+id+'/'+sectionSlug+'/'+previous.slug}><ArrowLeft size={16}/> Previous chapter</Link>:'First chapter'}</span>
+    <span>{previous?<Link to={'/library/'+id+'/'+sectionSlug+'/'+previous.slug+scriptQuery}><ArrowLeft size={16}/> Previous chapter</Link>:'First chapter'}</span>
     <Link className="source-index-link" to={'/library/'+id}>Browse Sthāna</Link>
-    <span>{next?<Link to={'/library/'+id+'/'+sectionSlug+'/'+next.slug}>Next chapter <ArrowRight size={16}/></Link>:'Last chapter'}</span>
+    <span>{next?<Link to={'/library/'+id+'/'+sectionSlug+'/'+next.slug+scriptQuery}>Next chapter <ArrowRight size={16}/></Link>:'Last chapter'}</span>
    </nav>
    {published&&passages.length>0?<>
     <div className="source-provenance">
@@ -116,36 +124,41 @@ export function ChapterPage({bookmarks,onToggle}:{bookmarks:string[];onToggle:(i
       <span>{passages.length} passages · {hasTranslations?'English meanings available':'No verified English meanings in this dataset'} · {hasTerms?'Glossary terms available':'Glossary pending'}</span></div>
      {published.source_url&&<a href={published.source_url} target="_blank" rel="noreferrer">View original source <ExternalLink size={14}/></a>}
     </div>
-    <p className="source-reader-disclaimer">Original passage boundaries may not correspond to numbered ślokas. {script==='deva'&&!hasDeva?'Devanagari is automatically transliterated from the IAST source and is not independently proofread. ':''}This digital text is not medical advice. Translations, commentary, and glossary details appear only where sourced material is available.</p>
+    <details className="source-reader-disclaimer"><summary>Edition and transliteration notes</summary><p>Original passage boundaries may not correspond to numbered ślokas. {generated?'This script includes automated transliteration and is not independently proofread. Characters without an equivalent may retain their original form. ':''}This digital text is not medical advice. Editorial material appears only where available.</p></details>
     {query&&<p className="source-match-count" role="status">{filtered.length} of {passages.length} passages match “{query}”.</p>}
     {filtered.length===0?<div className="source-reader-empty"><Search size={23}/><h2>No matching passages</h2><p>Try a Sanskrit word, reference, or a shorter phrase.</p><button onClick={()=>{setQuery('');setQueryInput('')}}>Show all passages</button></div>:
     <div className="source-shloka-list">
      {filtered.map((passage,index)=>{
       const passageKey='passage:'+id+'/'+sectionSlug+'/'+chapterSlug+'/'+passage.id;
-      const text=script==='deva'
-       ?(passage.text_devanagari||romanToDevanagari(passage.text_iast||''))
-       :(passage.text_iast||passage.text_devanagari);
-      const hasThisCommentary=Boolean(passage.commentary?.trim());
-      const expandedHere=showCommentary||expanded.includes(passage.id);
+      const text=renderSanskrit(passage.text_devanagari,passage.text_iast,script);
+      const originalCommentary=passage.commentary_sanskrit?.trim();
+      const commentaryMeaning=passage.commentary_en?.trim();
+      const hasThisCommentary=Boolean(originalCommentary||commentaryMeaning||passage.commentary?.trim());
+      const expandedHere=commentaryOverrides[passage.id]??showCommentary;
+      const sourceText=passage.text_devanagari||passage.text_iast;
       return <article key={passage.id||index} className="source-shloka-card" id={passage.id}>
        <div className="source-shloka-card-top">
-        <span>{passage.reference?'PASSAGE · '+passage.reference:'PASSAGE · '+(index+1)}</span>
+        <span>{passage.adhikarana?'ADHIKARANA '+passage.adhikarana+' · ŚLOKA '+passage.reference:'PASSAGE · '+(passage.reference||index+1)}</span>
         <button type="button" aria-label={bookmarks.includes(passageKey)?'Remove saved passage':'Save passage'} aria-pressed={bookmarks.includes(passageKey)}
          title={bookmarks.includes(passageKey)?'Remove saved passage':'Save passage'}
          onClick={()=>onToggle(passageKey)}>{bookmarks.includes(passageKey)?<BookmarkCheck size={19}/>:<Bookmark size={19}/>}</button>
        </div>
-       <p className={script==='deva'?'source-shloka-text source-shloka-devanagari':'source-shloka-text source-shloka-iast'}
-        lang={script==='deva'?'sa-Deva':'sa-Latn'}>{text}</p>
+       {text&&<p className={'source-shloka-text '+(script==='iast'?'source-shloka-iast':'source-shloka-devanagari')} lang={selected.lang}>{text}</p>}
+       {sourceText&&sourceText!==text&&<details className="source-view-original"><summary>View original</summary><p lang={passage.text_devanagari?'sa-Deva':'sa-Latn'}>{sourceText}</p></details>}
        {passage.translation_en&&<div className="source-shloka-panel"><span>MEANING OF THE ŚLOKA</span><p>{passage.translation_en}</p></div>}
        <div className="source-shloka-utilities">
-        <button type="button" onClick={()=>copyPassage(passage)}><BookOpen size={15}/>{copyStatus===passage.id?'Copied source passage':'Copy passage'}</button>
-        {hasThisCommentary&&<button type="button" aria-expanded={expandedHere} onClick={()=>{
-         if(showCommentary){setShowCommentary(false);setExpanded(list=>list.includes(passage.id)?list.filter(v=>v!==passage.id):[...list,passage.id]);}
-         else setExpanded(list=>list.includes(passage.id)?list.filter(v=>v!==passage.id):[...list,passage.id]);
-        }}>{expandedHere?'▾ Hide commentary':'▸ Show commentary'}</button>}
+        {sourceText&&<button type="button" onClick={()=>copyPassage(passage)}><BookOpen size={15}/>{copyStatus===passage.id?'Copied source passage':'Copy passage'}</button>}
+        {hasThisCommentary&&<button type="button" aria-expanded={expandedHere} onClick={()=>setCommentaryOverrides(current=>({...current,[passage.id]:!expandedHere}))}>
+         {expandedHere?'▾ Hide commentary':'▸ Show commentary'}</button>}
        </div>
-       {hasThisCommentary&&expandedHere&&<div className="source-shloka-commentary"><span>CLASSICAL COMMENTARY</span><p>{passage.commentary}</p></div>}
-       {(passage.key_terms||[]).length>0&&<div className="source-shloka-panel source-terms-panel"><span>KEY TERMS</span><div className="source-terms-grid">{passage.key_terms.map((term,i)=><div key={i}><strong>{term.term}</strong><p>{term.definition}</p></div>)}</div></div>}
+       {hasThisCommentary&&expandedHere&&<>
+        {originalCommentary&&<div className="source-shloka-commentary"><span>CLASSICAL COMMENTARY</span><p lang={selected.lang}>
+         {/[\u0900-\u097f]/u.test(originalCommentary)?renderSanskrit(originalCommentary,'',script):renderSanskrit('',originalCommentary,script)}
+        </p></div>}
+        {!originalCommentary&&passage.commentary?.trim()&&<div className="source-shloka-commentary"><span>COMMENTARY</span><p>{passage.commentary}</p></div>}
+        {commentaryMeaning&&<div className="source-shloka-panel"><span>MEANING OF THE COMMENTARY</span><p>{commentaryMeaning}</p></div>}
+       </>}
+       {(passage.key_terms||[]).length>0&&<div className="source-shloka-panel source-terms-panel"><span>KEY TERMS</span><div className="source-terms-grid">{passage.key_terms.map((term,i)=><div key={i}><strong>{term.term}</strong>{term.iast&&<span className="source-term-iast"> ({term.iast})</span>}<p>{term.definition}</p></div>)}</div></div>}
       </article>;
      })}
     </div>}
